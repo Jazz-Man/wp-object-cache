@@ -1,0 +1,22 @@
+{
+    "name": "jazzman/wp-object-cache",
+    "type": "wordpress-dropin",
+    "authors": [
+        {
+            "name": "Vasyl Sokolyk",
+            "email": "vsokolyk@gmail.com"
+        }
+    ],
+    "require": {},
+    "extra": {
+        "installer-paths": {
+            "vendor/wp/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
+            "vendor/wp/plugins/{$name}/": ["type:wordpress-plugin"],
+            "vendor/wp/themes/{$name}/": ["type:wordpress-theme"]
+        },
+        "wordpress-install-dir": "vendor/wp"
+    },
+    "require-dev": {
+        "roots/wordpress": "^4"
+    }
+}
