@@ -4,8 +4,57 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "479facf8dd5f3df417112d0922c4bb7c",
-    "packages": [],
+    "content-hash": "3767805d15bf222197ebfd5187e5660b",
+    "packages": [
+        {
+            "name": "jazzman/wp-memcached",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Jazz-Man/wp-memcached.git",
+                "reference": "d57aee3bba62d548f29d68e61fd1e345ac5255dd"
+            },
+            "require-dev": {
+                "dg/composer-cleaner": "^2.0",
+                "roave/security-advisories": "dev-master",
+                "roots/wordpress": "^4",
+                "symfony/var-dumper": "^4.2"
+            },
+            "suggest": {
+                "ext-memcached": "*"
+            },
+            "type": "library",
+            "extra": {
+                "installer-paths": {
+                    "vendor/wp/mu-plugins/{$name}/": [
+                        "type:wordpress-muplugin"
+                    ],
+                    "vendor/wp/plugins/{$name}/": [
+                        "type:wordpress-plugin"
+                    ],
+                    "vendor/wp/themes/{$name}/": [
+                        "type:wordpress-theme"
+                    ]
+                },
+                "wordpress-install-dir": "vendor/wp"
+            },
+            "autoload": {
+                "psr-4": {
+                    "JazzMan\\WPMemcached\\": ""
+                }
+            },
+            "license": [
+                "GPL-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Vasyl Sokolyk",
+                    "email": "vsokolyk@gmail.com"
+                }
+            ],
+            "time": "2019-03-11T18:42:08+00:00"
+        }
+    ],
     "packages-dev": [
         {
             "name": "roots/wordpress",
@@ -17,7 +66,8 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/WordPress/zipball/4.9.9"
+                "url": "https://api.github.com/repos/WordPress/WordPress/zipball/4.9.9",
+                "reference": "4.9.9"
             },
             "require": {
                 "php": ">=5.3.2",
@@ -102,7 +152,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "jazzman/wp-memcached": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],

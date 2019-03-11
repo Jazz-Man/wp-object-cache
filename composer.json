@@ -7,7 +7,16 @@
             "email": "vsokolyk@gmail.com"
         }
     ],
-    "require": {},
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/Jazz-Man/wp-memcached.git"
+        }
+
+    ],
+    "require": {
+        "jazzman/wp-memcached": "dev-master"
+    },
     "extra": {
         "installer-paths": {
             "vendor/wp/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
