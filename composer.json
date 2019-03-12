@@ -10,7 +10,8 @@
     ],
     "require": {
         "php": ">=7.0",
-        "jazzman/wp-memcached": "^0"
+        "jazzman/wp-memcached": "^0",
+        "composer/installers": "^1"
     },
     "extra": {
         "installer-paths": {
@@ -21,6 +22,7 @@
         "wordpress-install-dir": "vendor/wp"
     },
     "require-dev": {
-        "roots/wordpress": "^4"
+        "roots/wordpress": "^4",
+        "roave/security-advisories": "dev-master"
     }
 }
