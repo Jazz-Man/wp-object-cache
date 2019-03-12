@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b7ffc348552df9c367189d7396158736",
+    "content-hash": "1c37352529a8f3e8b350aab60f50331c",
     "packages": [
         {
             "name": "jazzman/wp-memcached",
@@ -66,16 +66,15 @@
     "packages-dev": [
         {
             "name": "roots/wordpress",
-            "version": "4.9.9",
+            "version": "5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WordPress/WordPress.git",
-                "reference": "4.9.9"
+                "reference": "5.1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/WordPress/zipball/4.9.9",
-                "reference": "4.9.9"
+                "url": "https://api.github.com/repos/WordPress/WordPress/zipball/5.1"
             },
             "require": {
                 "php": ">=5.3.2",
@@ -99,7 +98,7 @@
                 "cms",
                 "wordpress"
             ],
-            "time": "2018-12-13T04:12:34+00:00"
+            "time": "2019-02-22T00:57:46+00:00"
         },
         {
             "name": "roots/wordpress-core-installer",

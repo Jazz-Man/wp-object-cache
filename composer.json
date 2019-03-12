@@ -21,6 +21,6 @@
         "wordpress-install-dir": "vendor/wp"
     },
     "require-dev": {
-        "roots/wordpress": "^4"
+        "roots/wordpress": "^5"
     }
 }
