@@ -1,5 +1,6 @@
 {
     "name": "jazzman/wp-object-cache",
+    "license":"GPL-3.0+",
     "type": "wordpress-dropin",
     "authors": [
         {
@@ -7,15 +8,9 @@
             "email": "vsokolyk@gmail.com"
         }
     ],
-    "repositories": [
-        {
-            "type": "git",
-            "url": "https://github.com/Jazz-Man/wp-memcached.git"
-        }
-
-    ],
     "require": {
-        "jazzman/wp-memcached": "dev-master"
+        "php": ">=7.0",
+        "jazzman/wp-memcached": "^0"
     },
     "extra": {
         "installer-paths": {
