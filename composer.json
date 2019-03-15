@@ -1,7 +1,8 @@
 {
     "name": "jazzman/wp-object-cache",
     "license":"GPL-3.0+",
-    "type": "wordpress-dropin",
+    "type": "wordpress-plugin",
+    "version": "1.0",
     "authors": [
         {
             "name": "Vasyl Sokolyk",

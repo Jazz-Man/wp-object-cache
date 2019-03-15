@@ -1,14 +1,5 @@
 <?php
 
-/*
-Plugin Name: Memcached
-Description: Memcache or Memcached backend for the WP Object Cache
-Version: 0.1
-Plugin URI: https://github.com/Jazz-Man/wp-object-cache
-Author: Vasyl Sokolyk
-
-*/
-
 use JazzMan\WPMemcached\WPObjectCache;
 
 /**
