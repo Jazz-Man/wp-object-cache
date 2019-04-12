@@ -14,16 +14,7 @@
         "jazzman/wp-memcached": "^0",
         "composer/installers": "^1"
     },
-    "extra": {
-        "installer-paths": {
-            "vendor/wp/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
-            "vendor/wp/plugins/{$name}/": ["type:wordpress-plugin"],
-            "vendor/wp/themes/{$name}/": ["type:wordpress-theme"]
-        },
-        "wordpress-install-dir": "vendor/wp"
-    },
     "require-dev": {
-        "roots/wordpress": "^5",
         "roave/security-advisories": "dev-master"
     }
 }
