@@ -2,6 +2,7 @@
     "name": "jazzman/wp-object-cache",
     "license":"GPL-3.0+",
     "type": "wordpress-plugin",
+    "description": "Enable object caching for WordPress",
     "authors": [
         {
             "name": "Vasyl Sokolyk",
