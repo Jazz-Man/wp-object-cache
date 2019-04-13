@@ -1,12 +1,14 @@
 <?php
 
-use JazzMan\WPMemcached\WPObjectCache;
+use JazzMan\WPObjectCache\ObjectCache;
+use JazzMan\WPObjectCache\OutputCache;
 
 /**
  * Adds a value to cache.
  *
  * If the specified key already exists, the value is not stored and the function
  * returns false.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.add.php
  *
@@ -19,10 +21,7 @@ use JazzMan\WPMemcached\WPObjectCache;
  */
 function wp_cache_add($key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->add($key, $value, $group, $expiration);
+    return wp_object_cache()->add($key, $value, $group, $expiration);
 }
 
 /**
@@ -32,6 +31,7 @@ function wp_cache_add($key, $value, $group = '', $expiration = 0)
  * to a random server in the stack. Note that this method will add the key/value to the
  * _cache object as part of the runtime cache. It will add it to an array for the
  * specified server_key.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.addbykey.php
  *
@@ -45,14 +45,11 @@ function wp_cache_add($key, $value, $group = '', $expiration = 0)
  */
 function wp_cache_add_by_key($server_key, $key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->addByKey($server_key, $key, $value, $group, $expiration);
+    return wp_object_cache()->addByKey($server_key, $key, $value, $group, $expiration);
 }
 
 /**
- * Add a single server to the list of Memcached servers.
+ * Add a single server to the list of cache servers.
  *
  * @see http://www.php.net/manual/en/memcached.addserver.php
  *
@@ -64,10 +61,7 @@ function wp_cache_add_by_key($server_key, $key, $value, $group = '', $expiration
  */
 function wp_cache_add_server($host, $port, $weight = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->addServer($host, $port, $weight);
+    return wp_object_cache()->addServer($host, $port, $weight);
 }
 
 /**
@@ -75,6 +69,7 @@ function wp_cache_add_server($host, $port, $weight = 0)
  *
  * Each individual server in the array must include a domain and port, with an optional
  * weight value: $servers = array( array( '127.0.0.1', 11211, 0 ) );
+ *
  *
  * @see http://www.php.net/manual/en/memcached.addservers.php
  *
@@ -84,10 +79,7 @@ function wp_cache_add_server($host, $port, $weight = 0)
  */
 function wp_cache_add_servers($servers)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->addServers($servers);
+    return wp_object_cache()->addServers($servers);
 }
 
 /**
@@ -100,6 +92,7 @@ function wp_cache_add_servers($servers)
  * similar results and improve consistency. It is recommend that appends only occur with data of
  * the same type.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.append.php
  *
  * @param string $key   the key under which to store the value
@@ -110,10 +103,7 @@ function wp_cache_add_servers($servers)
  */
 function wp_cache_append($key, $value, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->append($key, $value, $group);
+    return wp_object_cache()->append($key, $value, $group);
 }
 
 /**
@@ -126,6 +116,7 @@ function wp_cache_append($key, $value, $group = '')
  * similar results and improve consistency. It is recommend that appends only occur with data of
  * the same type.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.appendbykey.php
  *
  * @param string $server_key the key identifying the server to store the value on
@@ -137,10 +128,7 @@ function wp_cache_append($key, $value, $group = '')
  */
 function wp_cache_append_by_key($server_key, $key, $value, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->appendByKey($server_key, $key, $value, $group);
+    return wp_object_cache()->appendByKey($server_key, $key, $value, $group);
 }
 
 /**
@@ -148,6 +136,7 @@ function wp_cache_append_by_key($server_key, $key, $value, $group = '')
  *
  * The set will be successful only if the no other request has updated the value since it was fetched by
  * this request.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.cas.php
  *
@@ -161,10 +150,7 @@ function wp_cache_append_by_key($server_key, $key, $value, $group = '')
  */
 function wp_cache_cas($cas_token, $key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->cas($cas_token, $key, $value, $group, $expiration);
+    return wp_object_cache()->cas($cas_token, $key, $value, $group, $expiration);
 }
 
 /**
@@ -173,10 +159,11 @@ function wp_cache_cas($cas_token, $key, $value, $group = '', $expiration = 0)
  * The set will be successful only if the no other request has updated the value since it was fetched by
  * this request.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.casbykey.php
  *
- * @param string $server_key the key identifying the server to store the value on
  * @param float  $cas_token  Unique value associated with the existing item. Generated by memcached.
+ * @param string $server_key the key identifying the server to store the value on
  * @param string $key        the key under which to store the value
  * @param mixed  $value      the value to store
  * @param string $group      the group value appended to the $key
@@ -186,31 +173,41 @@ function wp_cache_cas($cas_token, $key, $value, $group = '', $expiration = 0)
  */
 function wp_cache_cas_by_key($cas_token, $server_key, $key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->casByKey($cas_token, $server_key, $key, $value, $group, $expiration);
+    return wp_object_cache()->casByKey($cas_token, $server_key, $key, $value, $group, $expiration);
 }
 
 /**
  * Closes the cache.
  *
- * This function has ceased to do anything since WordPress 2.5. The
- * functionality was removed along with the rest of the persistent cache. This
- * does not mean that plugins can't implement this function when they need to
- * make sure that the cache is cleaned up after WordPress no longer needs it.
+ * This function is used to close a connection to a cache server.
  *
- * @since 2.0.0
  *
- * @return bool Always returns True
+ * @return bool return TRUE on success or FALSE on failure
  */
 function wp_cache_close()
 {
-    return true;
+    return wp_object_cache()->close();
+}
+
+/**
+ * Connect to a cache serve.
+ *
+ * This function is used to create a connection to a cache server.
+ *
+ *
+ * @return bool return TRUE on success or FALSE on failure
+ *
+ * @param mixed $server
+ * @param mixed $port
+ */
+function wp_cache_connect($server = '127.0.0.1', $port = 11211)
+{
+    return wp_object_cache()->connect($server, $port);
 }
 
 /**
  * Decrement a numeric item's value.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.decrement.php
  *
@@ -222,10 +219,7 @@ function wp_cache_close()
  */
 function wp_cache_decrement($key, $offset = 1, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->decrement($key, $offset, $group);
+    return wp_object_cache()->decrement($key, $offset, $group);
 }
 
 /**
@@ -233,6 +227,7 @@ function wp_cache_decrement($key, $offset = 1, $group = '')
  *
  * Same as wp_cache_decrement. Original WordPress caching backends use wp_cache_decr. I
  * want both spellings to work.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.decrement.php
  *
@@ -255,6 +250,7 @@ function wp_cache_decr($key, $offset = 1, $group = '')
  * deleting. Between the time that it is queued and the time it's deleted, add,
  * replace, and get will fail, but set will succeed.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.delete.php
  *
  * @param string $key   the key under which to store the value
@@ -265,10 +261,7 @@ function wp_cache_decr($key, $offset = 1, $group = '')
  */
 function wp_cache_delete($key, $group = '', $time = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->delete($key, $group, $time);
+    return wp_object_cache()->delete($key, $group, $time);
 }
 
 /**
@@ -278,6 +271,7 @@ function wp_cache_delete($key, $group = '', $time = 0)
  * $time parameter allows an object to be queued for deletion without immediately
  * deleting. Between the time that it is queued and the time it's deleted, add,
  * replace, and get will fail, but set will succeed.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.deletebykey.php
  *
@@ -290,14 +284,12 @@ function wp_cache_delete($key, $group = '', $time = 0)
  */
 function wp_cache_delete_by_key($server_key, $key, $group = '', $time = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->deleteByKey($server_key, $key, $group, $time);
+    return wp_object_cache()->deleteByKey($server_key, $key, $group, $time);
 }
 
 /**
  * Fetch the next result.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.fetch.php
  *
@@ -305,14 +297,12 @@ function wp_cache_delete_by_key($server_key, $key, $group = '', $time = 0)
  */
 function wp_cache_fetch()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->fetch();
+    return wp_object_cache()->fetch();
 }
 
 /**
  * Fetch all remaining results from the last request.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.fetchall.php
  *
@@ -320,14 +310,12 @@ function wp_cache_fetch()
  */
 function wp_cache_fetch_all()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->fetchAll();
+    return wp_object_cache()->fetchAll();
 }
 
 /**
  * Invalidate all items in the cache.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.flush.php
  *
@@ -337,10 +325,7 @@ function wp_cache_fetch_all()
  */
 function wp_cache_flush($delay = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->flush($delay);
+    return wp_object_cache()->flush($delay);
 }
 
 /**
@@ -352,6 +337,7 @@ function wp_cache_flush($delay = 0)
  * callback and/or token.
  *
  * Note that the $deprecated and $found args are only here for compatibility with the native wp_cache_get function.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.get.php
  *
@@ -366,23 +352,21 @@ function wp_cache_flush($delay = 0)
  */
 function wp_cache_get($key, $group = '', $force = false, &$found = null, $cache_cb = null, &$cas_token = null)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
     if (func_num_args() > 4) {
-        return $wp_object_cache->get($key, $group, $force, $found, '', false, $cache_cb, $cas_token);
+        return wp_object_cache()->get($key, $group, $force, $found, '', false, $cache_cb, $cas_token);
     }
 
-    return $wp_object_cache->get($key, $group, $force, $found);
+    return wp_object_cache()->get($key, $group, $force, $found);
 }
 
 /**
  * Retrieve object from cache from specified server.
  *
- * Gets an object from cache based on $key, $group and $server_key. In order to fully support the $cache_cb and
- * $cas_token parameters, the runtime cache is ignored by this function if either of those values are set. If either of
- * those values are set, the request is made directly to the memcached server for proper handling of the callback
- * and/or token.
+ * Gets an object from cache based on $key, $group and $server_key. In order to fully support the $cache_cb and $cas_token
+ * parameters, the runtime cache is ignored by this function if either of those values are set. If either of
+ * those values are set, the request is made directly to the memcached server for proper handling of the
+ * callback and/or token.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getbykey.php
  *
@@ -396,25 +380,23 @@ function wp_cache_get($key, $group = '', $force = false, &$found = null, $cache_
  *
  * @return bool|mixed cached object value
  */
-function wp_cache_get_by_key($server_key, $key, $group = '', $force = false, &$found = null, $cache_cb = null, &$cas_token = null) {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
+function wp_cache_get_by_key($server_key, $key, $group = '', $force = false, &$found = null, $cache_cb = null, &$cas_token = null)
+{
     if (func_num_args() > 5) {
-        return $wp_object_cache->getByKey($server_key, $key, $group, $force, $found, $cache_cb, $cas_token);
+        return wp_object_cache()->getByKey($server_key, $key, $group, $force, $found, $cache_cb, $cas_token);
     }
 
-    return $wp_object_cache->getByKey($server_key, $key, $group, $force, $found);
+    return wp_object_cache()->getByKey($server_key, $key, $group, $force, $found);
 }
 
 /**
  * Request multiple keys without blocking.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.getdelayed.php
  *
  * @param string|array $keys     array or string of key(s) to request
- * @param string|array $groups   Array or string of group(s) for the key(s). See buildKeys for more on how these are
- *                               handled.
+ * @param string|array $groups   Array or string of group(s) for the key(s). See buildKeys for more on how these are handled.
  * @param bool         $with_cas whether to request CAS token values also
  * @param null         $value_cb the result callback or NULL
  *
@@ -422,10 +404,7 @@ function wp_cache_get_by_key($server_key, $key, $group = '', $force = false, &$f
  */
 function wp_cache_get_delayed($keys, $groups = '', $with_cas = false, $value_cb = null)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getDelayed($keys, $groups, $with_cas, $value_cb);
+    return wp_object_cache()->getDelayed($keys, $groups, $with_cas, $value_cb);
 }
 
 /**
@@ -435,8 +414,7 @@ function wp_cache_get_delayed($keys, $groups = '', $with_cas = false, $value_cb 
  *
  * @param string       $server_key the key identifying the server to store the value on
  * @param string|array $keys       array or string of key(s) to request
- * @param string|array $groups     Array or string of group(s) for the key(s). See buildKeys for more on how these are
- *                                 handled.
+ * @param string|array $groups     Array or string of group(s) for the key(s). See buildKeys for more on how these are handled.
  * @param bool         $with_cas   whether to request CAS token values also
  * @param null         $value_cb   the result callback or NULL
  *
@@ -444,16 +422,47 @@ function wp_cache_get_delayed($keys, $groups = '', $with_cas = false, $value_cb 
  */
 function wp_cache_get_delayed_by_key($server_key, $keys, $groups = '', $with_cas = false, $value_cb = null)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
+    return wp_object_cache()->getDelayedByKey($server_key, $keys, $groups, $with_cas, $value_cb);
+}
 
-    return $wp_object_cache->getDelayedByKey($server_key, $keys, $groups, $with_cas, $value_cb);
+/**
+ * Get extended server pool statistics.
+ *
+ *
+ * @see http://www.php.net/manual/en/memcached.getstats.php
+ *
+ * @return array array of server statistics, one entry per server
+ *
+ * @param mixed $type
+ * @param mixed $slab_id
+ * @param mixed $limit
+ */
+function wp_cache_get_extended_stats($type, $slab_id = 0, $limit = 100)
+{
+    return wp_object_cache()->getExtendedStats($type, $slab_id, $limit);
+}
+
+/**
+ * Retrieve a cache key based on key & group.
+ *
+ *
+ * @see http://www.php.net/manual/en/memcached.get.php
+ *
+ * @param string $key   the key under which a value is stored
+ * @param string $group the group value appended to the $key
+ *
+ * @return string returns the cache key used for getting & setting
+ */
+function wp_cache_get_key($key, $group = '')
+{
+    return wp_object_cache()->buildKey($key, $group);
 }
 
 /**
  * Gets multiple values from memcached in one request.
  *
  * See the buildKeys method definition to understand the $keys/$groups parameters.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getmulti.php
  *
@@ -466,20 +475,18 @@ function wp_cache_get_delayed_by_key($server_key, $keys, $groups = '', $with_cas
  */
 function wp_cache_get_multi($keys, $groups = '', &$cas_tokens = null, $flags = null)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
     if (func_num_args() > 2) {
-        return $wp_object_cache->getMulti($keys, $groups, '', $cas_tokens, $flags);
+        return wp_object_cache()->getMulti($keys, $groups, '', $cas_tokens, $flags);
     }
 
-    return $wp_object_cache->getMulti($keys, $groups);
+    return wp_object_cache()->getMulti($keys, $groups);
 }
 
 /**
  * Gets multiple values from memcached in one request by specified server key.
  *
  * See the buildKeys method definition to understand the $keys/$groups parameters.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getmultibykey.php
  *
@@ -493,18 +500,16 @@ function wp_cache_get_multi($keys, $groups = '', &$cas_tokens = null, $flags = n
  */
 function wp_cache_get_multi_by_key($server_key, $keys, $groups = '', &$cas_tokens = null, $flags = null)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
     if (func_num_args() > 3) {
-        return $wp_object_cache->getMultiByKey($server_key, $keys, $groups, $cas_tokens, $flags);
+        return wp_object_cache()->getMultiByKey($server_key, $keys, $groups, $cas_tokens, $flags);
     }
 
-    return $wp_object_cache->getMultiByKey($server_key, $keys, $groups);
+    return wp_object_cache()->getMultiByKey($server_key, $keys, $groups);
 }
 
 /**
  * Retrieve a Memcached option value.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getoption.php
  *
@@ -514,14 +519,12 @@ function wp_cache_get_multi_by_key($server_key, $keys, $groups = '', &$cas_token
  */
 function wp_cache_get_option($option)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getOption($option);
+    return wp_object_cache()->getOption($option);
 }
 
 /**
  * Return the result code of the last option.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getresultcode.php
  *
@@ -529,14 +532,12 @@ function wp_cache_get_option($option)
  */
 function wp_cache_get_result_code()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getResultCode();
+    return wp_object_cache()->getResultCode();
 }
 
 /**
  * Return the message describing the result of the last operation.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getresultmessage.php
  *
@@ -544,14 +545,12 @@ function wp_cache_get_result_code()
  */
 function wp_cache_get_result_message()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getResultMessage();
+    return wp_object_cache()->getResultMessage();
 }
 
 /**
  * Get server information by key.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getserverbykey.php
  *
@@ -561,14 +560,12 @@ function wp_cache_get_result_message()
  */
 function wp_cache_get_server_by_key($server_key)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getServerByKey($server_key);
+    return wp_object_cache()->getServerByKey($server_key);
 }
 
 /**
  * Get the list of servers in the pool.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getserverlist.php
  *
@@ -576,14 +573,12 @@ function wp_cache_get_server_by_key($server_key)
  */
 function wp_cache_get_server_list()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getServerList();
+    return wp_object_cache()->getServerList();
 }
 
 /**
  * Get server pool statistics.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getstats.php
  *
@@ -591,14 +586,12 @@ function wp_cache_get_server_list()
  */
 function wp_cache_get_stats()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getStats();
+    return wp_object_cache()->getStats();
 }
 
 /**
  * Get server pool memcached version information.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.getversion.php
  *
@@ -606,14 +599,12 @@ function wp_cache_get_stats()
  */
 function wp_cache_get_version()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->getVersion();
+    return wp_object_cache()->getVersion();
 }
 
 /**
  * Increment a numeric item's value.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.increment.php
  *
@@ -625,10 +616,7 @@ function wp_cache_get_version()
  */
 function wp_cache_increment($key, $offset = 1, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->increment($key, $offset, $group);
+    return wp_object_cache()->increment($key, $offset, $group);
 }
 
 /**
@@ -636,6 +624,7 @@ function wp_cache_increment($key, $offset = 1, $group = '')
  *
  * This is the same as wp_cache_increment, but kept for back compatibility. The original
  * WordPress caching backends use wp_cache_incr. I want both to work.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.increment.php
  *
@@ -661,6 +650,7 @@ function wp_cache_incr($key, $offset = 1, $group = '')
  * mimicked in the internal cache to produce similar results and improve consistency. It is recommend
  * that prepends only occur with data of the same type.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.prepend.php
  *
  * @param string $key   the key under which to store the value
@@ -671,10 +661,7 @@ function wp_cache_incr($key, $offset = 1, $group = '')
  */
 function wp_cache_prepend($key, $value, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->prepend($key, $value, $group);
+    return wp_object_cache()->prepend($key, $value, $group);
 }
 
 /**
@@ -688,6 +675,7 @@ function wp_cache_prepend($key, $value, $group = '')
  * mimicked in the internal cache to produce similar results and improve consistency. It is recommend
  * that prepends only occur with data of the same type.
  *
+ *
  * @see http://www.php.net/manual/en/memcached.prependbykey.php
  *
  * @param string $server_key the key identifying the server to store the value on
@@ -699,10 +687,7 @@ function wp_cache_prepend($key, $value, $group = '')
  */
 function wp_cache_prepend_by_key($server_key, $key, $value, $group = '')
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->prependByKey($server_key, $key, $value, $group);
+    return wp_object_cache()->prependByKey($server_key, $key, $value, $group);
 }
 
 /**
@@ -710,6 +695,7 @@ function wp_cache_prepend_by_key($server_key, $key, $value, $group = '')
  *
  * This method is similar to "add"; however, is does not successfully set a value if
  * the object's key is not already set in cache.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.replace.php
  *
@@ -722,10 +708,7 @@ function wp_cache_prepend_by_key($server_key, $key, $value, $group = '')
  */
 function wp_cache_replace($key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->replace($key, $value, $group, $expiration);
+    return wp_object_cache()->replace($key, $value, $group, $expiration);
 }
 
 /**
@@ -733,6 +716,7 @@ function wp_cache_replace($key, $value, $group = '', $expiration = 0)
  *
  * This method is similar to "addByKey"; however, is does not successfully set a value if
  * the object's key is not already set in cache.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.addbykey.php
  *
@@ -746,16 +730,14 @@ function wp_cache_replace($key, $value, $group = '', $expiration = 0)
  */
 function wp_cache_replace_by_key($server_key, $key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->replaceByKey($server_key, $key, $value, $group, $expiration);
+    return wp_object_cache()->replaceByKey($server_key, $key, $value, $group, $expiration);
 }
 
 /**
  * Sets a value in cache.
  *
  * The value is set whether or not this key already exists in memcached.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.set.php
  *
@@ -768,16 +750,14 @@ function wp_cache_replace_by_key($server_key, $key, $value, $group = '', $expira
  */
 function wp_cache_set($key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->set($key, $value, $group, $expiration);
+    return wp_object_cache()->set($key, $value, $group, $expiration);
 }
 
 /**
  * Sets a value in cache.
  *
  * The value is set whether or not this key already exists in memcached.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.set.php
  *
@@ -791,10 +771,7 @@ function wp_cache_set($key, $value, $group = '', $expiration = 0)
  */
 function wp_cache_set_by_key($server_key, $key, $value, $group = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->setByKey($server_key, $key, $value, $group, $expiration);
+    return wp_object_cache()->setByKey($server_key, $key, $value, $group, $expiration);
 }
 
 /**
@@ -806,6 +783,7 @@ function wp_cache_set_by_key($server_key, $key, $value, $group = '', $expiration
  * are merged with the $groups array/string value via buildKeys to determine the
  * final key for the object.
  *
+ *
  * @param array        $items      an array of key/value pairs to store on the server
  * @param string|array $groups     group(s) to merge with key(s) in $items
  * @param int          $expiration the expiration time, defaults to 0
@@ -814,10 +792,7 @@ function wp_cache_set_by_key($server_key, $key, $value, $group = '', $expiration
  */
 function wp_cache_set_multi($items, $groups = '', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->setMulti($items, $groups, $expiration);
+    return wp_object_cache()->setMulti($items, $groups, $expiration);
 }
 
 /**
@@ -829,6 +804,7 @@ function wp_cache_set_multi($items, $groups = '', $expiration = 0)
  * are merged with the $groups array/string value via buildKeys to determine the
  * final key for the object.
  *
+ *
  * @param string       $server_key the key identifying the server to store the value on
  * @param array        $items      an array of key/value pairs to store on the server
  * @param string|array $groups     group(s) to merge with key(s) in $items
@@ -838,14 +814,12 @@ function wp_cache_set_multi($items, $groups = '', $expiration = 0)
  */
 function wp_cache_set_multi_by_key($server_key, $items, $groups = 'default', $expiration = 0)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->setMultiByKey($server_key, $items, $groups, $expiration);
+    return wp_object_cache()->setMultiByKey($server_key, $items, $groups, $expiration);
 }
 
 /**
  * Set a Memcached option.
+ *
  *
  * @see http://www.php.net/manual/en/memcached.setoption.php
  *
@@ -856,23 +830,40 @@ function wp_cache_set_multi_by_key($server_key, $items, $groups = 'default', $ex
  */
 function wp_cache_set_option($option, $value)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-
-    return $wp_object_cache->setOption($option, $value);
+    return wp_object_cache()->setOption($option, $value);
 }
 
 /**
  * Switch blog prefix, which changes the cache that is accessed.
  *
+ *
  * @param int $blog_id blog to switch to
  */
 function wp_cache_switch_to_blog($blog_id)
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
+    return wp_object_cache()->switch_to_blog($blog_id);
+}
 
-    return $wp_object_cache->switch_to_blog($blog_id);
+/**
+ * Adds a group or set of groups to the list of non-persistent groups.
+ *
+ *
+ * @param string|array $groups a group or an array of groups to add
+ */
+function wp_cache_add_global_groups($groups)
+{
+    wp_object_cache()->add_global_groups($groups);
+}
+
+/**
+ * Adds a group or set of groups to the list of non-persistent groups.
+ *
+ *
+ * @param string|array $groups a group or an array of groups to add
+ */
+function wp_cache_add_non_persistent_groups($groups)
+{
+    wp_object_cache()->add_non_persistent_groups($groups);
 }
 
 /**
@@ -880,31 +871,140 @@ function wp_cache_switch_to_blog($blog_id)
  */
 function wp_cache_init()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-    $wp_object_cache = new WPObjectCache();
+    wp_object_cache_init();
 }
 
 /**
- * Adds a group or set of groups to the list of non-persistent groups.
+ * Returns the Object Cache Global.
  *
- * @param string|array $groups a group or an array of groups to add
+ * @return ObjectCache
  */
-function wp_cache_add_global_groups($groups)
+function wp_object_cache()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-    $wp_object_cache->add_global_groups($groups);
+    if (!isset($GLOBALS['wp_object_cache'])) {
+        wp_object_cache_init();
+    }
+
+    return $GLOBALS['wp_object_cache'];
 }
 
 /**
- * Adds a group or set of groups to the list of non-Memcached groups.
- *
- * @param string|array $groups a group or an array of groups to add
+ * Sets up Output Cache Global and assigns it.
  */
-function wp_cache_add_non_persistent_groups($groups)
+function wp_object_cache_init()
 {
-    /* @var WPObjectCache $wp_object_cache */
-    global $wp_object_cache;
-    $wp_object_cache->add_non_persistent_groups($groups);
+    $GLOBALS['wp_object_cache'] = new ObjectCache();
+}
+
+/**
+ * Sets up Output Cache Global and assigns it.
+ */
+function wp_output_cache_init()
+{
+    $GLOBALS['wp_output_cache'] = new OutputCache();
+}
+
+/**
+ * Returns the Output Cache Global.
+ *
+ *
+ * @return OutputCache
+ */
+function wp_output_cache()
+{
+    if (!isset($GLOBALS['wp_output_cache'])) {
+        wp_output_cache_init();
+    }
+
+    return $GLOBALS['wp_output_cache'];
+}
+
+/**
+ * Should we skip the output cache?
+ *
+ *
+ * @return bool
+ */
+function wp_skip_output_cache()
+{
+    // Bail if caching not turned on
+    if (!defined('WP_CACHE') || (true !== WP_CACHE)) {
+        return true;
+    }
+
+    // Bail if no content directory
+    if (!defined('WP_CONTENT_DIR')) {
+        return true;
+    }
+
+    // Never cache interactive scripts or API endpoints.
+    if (in_array(basename($_SERVER['SCRIPT_FILENAME']), [
+        'wp-app.php',
+        'wp-cron.php',
+        'ms-files.php',
+        'xmlrpc.php',
+    ])) {
+        return true;
+    }
+
+    // Never cache JavaScript generators
+    if (strstr($_SERVER['SCRIPT_FILENAME'], 'wp-includes/js')) {
+        return true;
+    }
+
+    // Never cache when POST data is present.
+    if (!empty($GLOBALS['HTTP_RAW_POST_DATA']) || !empty($_POST)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Cancel Output-Cache.
+ */
+function wp_output_cache_cancel()
+{
+    wp_output_cache()->cancel = true;
+}
+
+/**
+ * Variants can be set by functions which use early-set globals like $_SERVER to
+ * run simple tests. Functions defined in WordPress, plugins, and themes are not
+ * available and MUST NOT be used.
+ *
+ * Example: wp_output_cache_vary('return preg_match("/feedburner/i", $_SERVER["HTTP_USER_AGENT"]);');
+ *          This will cause spider_cache to cache a variant for requests from Feedburner.
+ *
+ * Tips for writing $function:
+ * - DO NOT use any functions from your theme or plugins. Those files have not
+ *   been included. Fatal error.
+ * - DO NOT use any WordPress functions except from load.php and plugin.php.
+ *   Fatal error.
+ * - DO NOT include or require files from anywhere without consulting expensive
+ *   professionals first. Fatal error.
+ * - DO NOT use $wpdb, $blog_id, $current_user, etc. These have not been properly initialized.
+ * - DO understand how create_function works. This is how your code is used: create_function('', $function);
+ * - DO remember to return something. The return value determines the cache variant.
+ *
+ * @param mixed $function
+ */
+function wp_output_cache_vary($function = '')
+{
+    // Bail if no function
+    if (empty($function)) {
+        die('Variant determiner cannot be empty.');
+    }
+
+    // Bail if illegal name
+    if (preg_match('/include|require|echo|print|dump|export|open|sock|unlink|`|eval/i', $function)) {
+        die('Illegal word in variant determiner.');
+    }
+
+    // Bail if not callable or missing variables
+    if (!is_callable($function) && !preg_match('/\$_/', $function)) {
+        die('Variant determiner should be callable or use at least one $_ variable.');
+    }
+
+    wp_output_cache()->add_variant($function);
 }
