@@ -1,21 +1,33 @@
 {
-    "name": "jazzman/wp-object-cache",
-    "version": "1.0",
-    "license":"GPL-3.0+",
-    "type": "wordpress-plugin",
-    "description": "Enable object caching for WordPress",
-    "authors": [
-        {
-            "name": "Vasyl Sokolyk",
-            "email": "vsokolyk@gmail.com"
-        }
-    ],
-    "require": {
-        "php": ">=7.0",
-        "jazzman/wp-memcached": "^0",
-        "composer/installers": "^1"
-    },
-    "require-dev": {
-        "roave/security-advisories": "dev-master"
+  "name": "jazzman/wp-object-cache",
+  "version": "1.0",
+  "license": "GPL-3.0+",
+  "type": "wordpress-plugin",
+  "description": "Enable object caching for WordPress",
+  "authors": [
+    {
+      "name": "Vasyl Sokolyk",
+      "email": "vsokolyk@gmail.com"
     }
+  ],
+  "config": {
+    "sort-packages": true,
+    "classmap-authoritative": true,
+    "preferred-install": "dist",
+    "optimize-autoloader": true
+  },
+  "require": {
+    "php": ">=7.0",
+    "ext-memcached": "*",
+    "composer/installers": "^1",
+    "jazzman/parameter-bag": "^1.2"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "JazzMan\\WPObjectCache\\": "src"
+    }
+  }
 }
