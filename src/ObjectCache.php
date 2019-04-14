@@ -7,8 +7,6 @@ namespace JazzMan\WPObjectCache;
  */
 class ObjectCache extends ObjectCacheBase
 {
-
-
     /**
      * Adds a value to cache.
      *
@@ -28,18 +26,34 @@ class ObjectCache extends ObjectCacheBase
     {
         $result = false;
 
+        if ($this->isSuspendCacheAddition()) {
+            return $result;
+        }
+
         $derived_key = $this->buildKey($key, $group);
 
-        if ($this->checkPermissions($group)) {
+        if ($this->isIgnoredGroup($group)) {
+            if ($this->hasCache($derived_key)) {
+                return $result;
+            }
+
+            $this->setCache($derived_key, $value);
+
+            return true;
+        }
+
+        if ($this->getServerStatus()) {
             $expiration = $this->validateExpiration($expiration);
 
             $value = maybe_serialize($value);
 
-            $result = $this->m->add($derived_key, $value, $expiration);
-        }
+            $result = $this->memcached->add($derived_key, $value, $expiration);
 
-        if ($result) {
-            $this->addToInternalCache($derived_key, $value);
+            if ($this->isResSuccess()) {
+                $this->setCache($derived_key, $value);
+            }
+
+            return $result;
         }
 
         return $result;
@@ -62,61 +76,32 @@ class ObjectCache extends ObjectCacheBase
      */
     public function replace($key, $value, $group = 'default', $expiration = 0)
     {
-        return $this->add_or_replace(false, $key, $value, $group, $expiration);
-    }
-
-    /**
-     * Add or replace a value in the cache.
-     *
-     * Add does not set the value if the key exists; replace does not replace if the value doesn't exist.
-     *
-     * @param bool   $add        True if should only add if value doesn't exist, false to only add when value already exists
-     * @param string $key        the key under which to store the value
-     * @param mixed  $value      the value to store
-     * @param string $group      the group value appended to the $key
-     * @param int    $expiration the expiration time, defaults to 0
-     *
-     * @return bool returns TRUE on success or FALSE on failure
-     */
-    private function add_or_replace($add, $key, $value, $group = 'default', $expiration = 0)
-    {
-        $cache_addition_suspended = \function_exists('wp_suspend_cache_addition')
-            ? wp_suspend_cache_addition()
-            : false;
-
-        if ($add && $cache_addition_suspended) {
-            return false;
-        }
-
-        $result = true;
+        $result = false;
 
         $derived_key = $this->buildKey($key, $group);
 
-        // If group is a non-Memcached group, save to internal cache, not Memcached
-        if ($this->checkPermissions($group)) {
-            $_expiration = $this->validateExpiration($expiration);
+        if ($this->isIgnoredGroup($group)) {
+            if ($this->hasCache($derived_key)) {
+                $this->setCache($derived_key, $value);
 
-            $_value = maybe_serialize($value);
-
-            if ($add) {
-                $result = $this->m->add($derived_key, $_value, $_expiration);
-            } else {
-                $result = $this->m->replace($derived_key, $_value, $_expiration);
+                return true;
             }
 
-            if ($this->isResNotstored()) {
-                $result = $this->set($key, $value, $group, $expiration);
+            return $result;
+        }
+
+        if ($this->getServerStatus()) {
+            $expiration = $this->validateExpiration($expiration);
+
+            $value = maybe_serialize($value);
+
+            $result = $this->memcached->replace($derived_key, $value, $expiration);
+
+            if ($this->isResSuccess()) {
+                $this->setCache($derived_key, $value);
             }
-        }
 
-        $exists = isset($this->cache[$derived_key]);
-
-        if ($add === $exists) {
-            return false;
-        }
-
-        if ($result) {
-            $this->addToInternalCache($derived_key, $value);
+            return $result;
         }
 
         return $result;
@@ -136,22 +121,39 @@ class ObjectCache extends ObjectCacheBase
      */
     public function decr($key, $offset = 1, $group = 'default')
     {
+        $result = false;
         $derived_key = $this->buildKey($key, $group);
-        $offset = (int) $offset;
 
         // If group is a non-Memcached group, save to internal cache, not Memcached
-        if ($this->checkPermissions($group)) {
-            $value = $this->getFromInternalCache($derived_key, $group);
-            $value -= $offset;
-            $this->addToInternalCache($derived_key, $value);
+        if ($this->isIgnoredGroup($group)) {
+            $value = $this->getCache($derived_key);
+            if ($value && $value >= 0) {
+                if (is_numeric($value)) {
+                    $value -= (int) $offset;
+                } else {
+                    $value = 0;
+                }
 
-            return $value;
+                if ($value < 0) {
+                    $value = 0;
+                }
+
+                $this->setCache($derived_key, $value);
+
+                return $value;
+            }
+
+            return $result;
         }
 
-        $result = $this->m->decrement($derived_key, $offset);
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->decrement($derived_key, $offset);
 
-        if ($this->isResSuccess()) {
-            $this->addToInternalCache($derived_key, $result);
+            if ($this->isResSuccess()) {
+                $this->setCache($derived_key, $result);
+            }
+
+            return $result;
         }
 
         return $result;
@@ -179,34 +181,18 @@ class ObjectCache extends ObjectCacheBase
 
         $derived_key = $this->buildKey($key, $group);
 
-        if ($this->checkPermissions($group)) {
-            $result = $this->m->delete($derived_key, $time);
+        if ($this->isIgnoredGroup($group)) {
+            return $this->deleteCache($derived_key);
         }
 
-        if (isset($this->cache[$derived_key]) && $this->isResSuccess()) {
-            unset($this->cache[$derived_key]);
-            $result = true;
-        }
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->delete($derived_key, $time);
 
-        return $result;
-    }
+            if ($this->isResSuccess()) {
+                $result = $this->deleteCache($derived_key);
+            }
 
-    /**
-     * Invalidate all items in the cache.
-     *
-     * @see http://www.php.net/manual/en/memcached.flush.php
-     *
-     * @param int $delay number of seconds to wait before invalidating the items
-     *
-     * @return bool returns TRUE on success or FALSE on failure
-     */
-    public function flush($delay = 0)
-    {
-        $result = $this->m->flush($delay);
-
-        // Only reset the runtime cache if memcached was properly flushed
-        if ($this->isResSuccess()) {
-            $this->cache = [];
+            return $result;
         }
 
         return $result;
@@ -235,42 +221,38 @@ class ObjectCache extends ObjectCacheBase
      */
     public function get($key, $group = 'default', $force = false, &$found = null)
     {
+        $result = false;
         $derived_key = $this->buildKey($key, $group);
 
-        if (isset($this->cache[$derived_key]) && !$force) {
+        if ($this->isIgnoredGroup($group) && $this->hasCache($derived_key) && !$force) {
             $found = true;
             ++$this->cache_hits;
 
-            return \is_object($this->cache[$derived_key]) ? clone $this->cache[$derived_key] : $this->cache[$derived_key];
+            return $this->getCache($derived_key);
         }
 
-        if (!$this->checkPermissions($group)) {
-            $found = false;
-            ++$this->cache_misses;
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->get($derived_key);
 
-            return false;
+            if ($this->isResNotfound()) {
+                $found = false;
+                ++$this->cache_misses;
+
+                return false;
+            }
+
+            $found = true;
+
+            ++$this->cache_hits;
+
+            $value = maybe_unserialize($result);
+
+            $this->setCache($derived_key, $value);
+
+            return \is_object($value) ? clone $value : $value;
         }
 
-        $result = $this->m->get($derived_key);
-
-        if ($this->isResNotfound()) {
-            $found = false;
-            ++$this->cache_misses;
-
-            return false;
-        }
-
-        $found = true;
-
-        ++$this->cache_hits;
-
-        $value = maybe_unserialize($result);
-
-        $this->addToInternalCache($derived_key, $value);
-
-        $value = \is_object($value) ? clone $value : $value;
-
-        return $value;
+        return $result;
     }
 
     /**
@@ -288,23 +270,39 @@ class ObjectCache extends ObjectCacheBase
      */
     public function incr($key, $offset = 1, $group = 'default')
     {
+        $result = false;
         $derived_key = $this->buildKey($key, $group);
-        $offset = (int) $offset;
 
-        // If group is a non-Memcached group, save to internal cache, not Memcached
-        if ($this->checkPermissions($group)) {
-            $value = $this->getFromInternalCache($derived_key, $group);
-            $value += $offset;
+        if ($this->isIgnoredGroup($group)) {
+            $value = $this->getCache($derived_key);
 
-            $this->addToInternalCache($derived_key, $value);
+            if ($value && $value >= 0) {
+                if (is_numeric($value)) {
+                    $value += (int) $offset;
+                } else {
+                    $value = 0;
+                }
 
-            return $value;
+                if ($value < 0) {
+                    $value = 0;
+                }
+
+                $this->setCache($derived_key, $value);
+
+                return $value;
+            }
+
+            return false;
         }
 
-        $result = $this->m->increment($derived_key, $offset);
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->increment($derived_key, (int) $offset);
 
-        if ($this->isResSuccess()) {
-            $this->addToInternalCache($derived_key, $result);
+            if ($this->isResSuccess()) {
+                $this->setCache($derived_key, $result);
+            }
+
+            return $result;
         }
 
         return $result;
@@ -326,36 +324,29 @@ class ObjectCache extends ObjectCacheBase
      */
     public function set($key, $value, $group = 'default', $expiration = 0)
     {
-        $result = true;
+        $result = false;
 
         $derived_key = $this->buildKey($key, $group);
 
-        // If group is a non-Memcached group, save to runtime cache, not Memcached
+        if ($this->isIgnoredGroup($group)) {
+            $this->setCache($derived_key, $value);
 
-        if ($this->checkPermissions($group)) {
-            $expiration = $this->validateExpiration($expiration);
-
-            $value = maybe_serialize($value);
-
-            $result = $this->m->set($derived_key, $value, $expiration);
+            return true;
         }
 
-        // if the set was successful, or we didn't go to redis
-        if ($result) {
-            $this->addToInternalCache($derived_key, $value);
+        if ($this->getServerStatus()) {
+            $expiration = $this->validateExpiration($expiration);
+            $value = maybe_serialize($value);
+
+            $result = $this->memcached->set($derived_key, $value, $expiration);
+
+            if ($this->isResSuccess()) {
+                $this->setCache($derived_key, $result);
+            }
+
+            return $result;
         }
 
         return $result;
     }
-
-    /**
-     * @param string $group
-     *
-     * @return bool
-     */
-    private function checkPermissions($group)
-    {
-        return !$this->isIgnoredGroup($group) && $this->getServerStatus();
-    }
-
 }
