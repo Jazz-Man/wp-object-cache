@@ -11,12 +11,6 @@ use Memcached;
 class ObjectCacheBase
 {
     /**
-     * Holds the Memcached object.
-     *
-     * @var Memcached
-     */
-    public $m;
-    /**
      * List of global groups.
      *
      * @var array
@@ -51,13 +45,6 @@ class ObjectCacheBase
         'term_meta',
         'themes',
     ];
-
-    /**
-     * List of groups not saved to Memcached.
-     *
-     * @var ParameterBag
-     */
-    private $ignored_groups;
     /**
      * Prefix used for global groups.
      *
@@ -79,19 +66,23 @@ class ObjectCacheBase
      */
     protected $cache_misses = 0;
     /**
+     * Holds the Memcached object.
+     *
+     * @var Memcached
+     */
+    protected $memcached;
+    /**
+     * List of groups not saved to Memcached.
+     *
+     * @var ParameterBag
+     */
+    private $ignored_groups;
+    /**
      * Holds the non-Memcached objects.
      *
      * @var ParameterBag
      */
     private $cache;
-    /**
-     * @var float|int
-     */
-    private $thirty_days;
-    /**
-     * @var int
-     */
-    private $now;
 
     /**
      * Instantiate the Memcached class.
@@ -107,25 +98,21 @@ class ObjectCacheBase
     {
         global $blog_id, $table_prefix;
 
-        $this->m = new Memcached(!empty($persistent_id) ? $persistent_id : '');
+        $this->memcached = new Memcached(!empty($persistent_id) ? $persistent_id : '');
 
         $this->cache = new ParameterBag();
 
         $this->ignored_groups = new ParameterBag(['comment', 'counts']);
 
-        $this->m->addServer((string) $this->getMemcachedHost(), (int) $this->getMemcachedPort());
+        $this->memcached->addServer((string) $this->getMemcachedHost(), (int) $this->getMemcachedPort());
 
-        $this->m->setOptions($this->getMemcachedOptions());
+        $this->memcached->setOptions($this->getMemcachedOptions());
 
         // Assign global and blog prefixes for use with keys
         if (\function_exists('is_multisite')) {
             $this->global_prefix = (is_multisite() || (\defined('CUSTOM_USER_TABLE') && \defined('CUSTOM_USER_META_TABLE'))) ? '' : $table_prefix;
             $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).':';
         }
-
-        // Setup cacheable values for handling expiration times
-        $this->thirty_days = MONTH_IN_SECONDS;
-        $this->now = time();
     }
 
     /**
@@ -175,58 +162,11 @@ class ObjectCacheBase
     }
 
     /**
-     * @param string $key
-     * @param bool   $default
-     *
-     * @return mixed|null
+     * @return \Memcached
      */
-    protected function getCache($key, $default = false)
+    public function getMemcached()
     {
-        $data = $this->cache->get($key, $default);
-
-        return \is_object($data) ? clone $data : $data;
-    }
-
-    /**
-     * @param string $key
-     * @param mixed  $value
-     */
-    protected function setCache($key, $value)
-    {
-        $this->cache->offsetSet($key, $value);
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool
-     */
-    protected function hasCache($key)
-    {
-        return $this->cache->offsetExists($key);
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool
-     */
-    protected function deleteCache($key)
-    {
-        $result = false;
-
-        if ($this->hasCache($key)) {
-            $this->cache->offsetUnset($key);
-
-            $result = true;
-        }
-
-        return $result;
-    }
-
-    protected function flushCache()
-    {
-        $this->cache->exchangeArray([]);
+        return $this->memcached;
     }
 
     /**
@@ -255,7 +195,7 @@ class ObjectCacheBase
      */
     protected function getServerStatus()
     {
-        return (bool) $this->m->getStats();
+        return (bool) $this->memcached->getStats();
     }
 
     /**
@@ -314,6 +254,28 @@ class ObjectCacheBase
     }
 
     /**
+     * @param string $key
+     * @param bool   $default
+     *
+     * @return mixed|null
+     */
+    protected function getCache($key, $default = false)
+    {
+        $data = $this->cache->get($key, $default);
+
+        return \is_object($data) ? clone $data : $data;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     */
+    protected function setCache($key, $value)
+    {
+        $this->cache->offsetSet($key, $value);
+    }
+
+    /**
      * Switch blog prefix, which changes the cache that is accessed.
      *
      * @param int $blog_id blog to switch to
@@ -323,6 +285,60 @@ class ObjectCacheBase
         global $table_prefix;
         $blog_id = (int) $blog_id;
         $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).':';
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    protected function deleteCache($key)
+    {
+        $result = false;
+
+        if ($this->hasCache($key)) {
+            $this->cache->offsetUnset($key);
+
+            $result = true;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    protected function hasCache($key)
+    {
+        return $this->cache->offsetExists($key);
+    }
+
+    /**
+     * Invalidate all items in the cache.
+     *
+     * @see http://www.php.net/manual/en/memcached.flush.php
+     *
+     * @param int $delay number of seconds to wait before invalidating the items
+     *
+     * @return bool returns TRUE on success or FALSE on failure
+     */
+    public function flush($delay = 0)
+    {
+        $result = false;
+
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->flush($delay);
+
+            if ($this->isResSuccess()) {
+                $this->cache->exchangeArray([]);
+
+                $result = true;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -362,7 +378,7 @@ class ObjectCacheBase
      */
     protected function isResSuccess()
     {
-        return Memcached::RES_SUCCESS === $this->m->getResultCode();
+        return Memcached::RES_SUCCESS === $this->memcached->getResultCode();
     }
 
     /**
@@ -370,7 +386,7 @@ class ObjectCacheBase
      */
     protected function isResNotfound()
     {
-        return Memcached::RES_NOTFOUND === $this->m->getResultCode();
+        return Memcached::RES_NOTFOUND === $this->memcached->getResultCode();
     }
 
     /**
@@ -378,6 +394,6 @@ class ObjectCacheBase
      */
     protected function isResNotstored()
     {
-        return Memcached::RES_NOTSTORED === $this->m->getResultCode();
+        return Memcached::RES_NOTSTORED === $this->memcached->getResultCode();
     }
 }
