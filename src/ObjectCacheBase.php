@@ -2,6 +2,7 @@
 
 namespace JazzMan\WPObjectCache;
 
+use JazzMan\ParameterBag\ParameterBag;
 use Memcached;
 
 /**
@@ -15,14 +16,6 @@ class ObjectCacheBase
      * @var Memcached
      */
     public $m;
-
-    /**
-     * Holds the non-Memcached objects.
-     *
-     * @var array
-     */
-    public $cache = [];
-
     /**
      * List of global groups.
      *
@@ -62,23 +55,35 @@ class ObjectCacheBase
     /**
      * List of groups not saved to Memcached.
      *
-     * @var array
+     * @var ParameterBag
      */
-    public $ignored_groups = ['comment', 'counts'];
-
+    private $ignored_groups;
     /**
      * Prefix used for global groups.
      *
      * @var string
      */
     public $global_prefix = '';
-
     /**
      * Prefix used for non-global groups.
      *
      * @var string
      */
     public $blog_prefix = '';
+    /**
+     * @var int
+     */
+    protected $cache_hits = 0;
+    /**
+     * @var int
+     */
+    protected $cache_misses = 0;
+    /**
+     * Holds the non-Memcached objects.
+     *
+     * @var ParameterBag
+     */
+    private $cache;
     /**
      * @var float|int
      */
@@ -89,16 +94,6 @@ class ObjectCacheBase
     private $now;
 
     /**
-     * @var int
-     */
-    protected $cache_hits = 0;
-
-    /**
-     * @var int
-     */
-    protected $cache_misses = 0;
-
-    /**
      * Instantiate the Memcached class.
      *
      * Instantiates the Memcached class and returns adds the servers specified
@@ -106,13 +101,17 @@ class ObjectCacheBase
      *
      * @see    http://www.php.net/manual/en/memcached.construct.php
      *
-     * @param null $persistent_id to create an instance that persists between requests, use persistent_id to specify a unique ID for the instance
+     * @param string $persistent_id to create an instance that persists between requests, use persistent_id to specify a unique ID for the instance
      */
-    public function __construct($persistent_id = null)
+    public function __construct($persistent_id = '')
     {
         global $blog_id, $table_prefix;
 
-        $this->m = new Memcached();
+        $this->m = new Memcached(!empty($persistent_id) ? $persistent_id : '');
+
+        $this->cache = new ParameterBag();
+
+        $this->ignored_groups = new ParameterBag(['comment', 'counts']);
 
         $this->m->addServer((string) $this->getMemcachedHost(), (int) $this->getMemcachedPort());
 
@@ -176,14 +175,58 @@ class ObjectCacheBase
     }
 
     /**
-     * Simple wrapper for saving object to the internal cache.
+     * @param string $key
+     * @param bool   $default
      *
-     * @param string $derived_key key to save value under
-     * @param mixed  $value       object value
+     * @return mixed|null
      */
-    protected function addToInternalCache($derived_key, $value)
+    protected function getCache($key, $default = false)
     {
-        $this->cache[$derived_key] = $value;
+        $data = $this->cache->get($key, $default);
+
+        return \is_object($data) ? clone $data : $data;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     */
+    protected function setCache($key, $value)
+    {
+        $this->cache->offsetSet($key, $value);
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    protected function hasCache($key)
+    {
+        return $this->cache->offsetExists($key);
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    protected function deleteCache($key)
+    {
+        $result = false;
+
+        if ($this->hasCache($key)) {
+            $this->cache->offsetUnset($key);
+
+            $result = true;
+        }
+
+        return $result;
+    }
+
+    protected function flushCache()
+    {
+        $this->cache->exchangeArray([]);
     }
 
     /**
@@ -206,6 +249,16 @@ class ObjectCacheBase
     }
 
     /**
+     * Is Memcached available?
+     *
+     * @return bool
+     */
+    protected function getServerStatus()
+    {
+        return (bool) $this->m->getStats();
+    }
+
+    /**
      * Add non-persistent groups.
      *
      * @author  Ryan Boren   This function comes straight from the original WP Memcached Object cache
@@ -219,8 +272,10 @@ class ObjectCacheBase
         if ($this->getServerStatus()) {
             $groups = (array) $groups;
 
-            $this->ignored_groups = array_merge($this->ignored_groups, $groups);
-            $this->ignored_groups = array_unique(array_filter($this->ignored_groups));
+            $ignored_groups = array_merge($this->ignored_groups->getArrayCopy(), $groups);
+            $ignored_groups = array_unique(array_filter($ignored_groups));
+
+            $this->ignored_groups->exchangeArray($ignored_groups);
         }
     }
 
@@ -236,7 +291,7 @@ class ObjectCacheBase
     {
         $derived_key = $this->buildKey($key, $group);
 
-        return $this->cache[$derived_key] ?? false;
+        return $this->getCache($derived_key);
     }
 
     /**
@@ -259,6 +314,18 @@ class ObjectCacheBase
     }
 
     /**
+     * Switch blog prefix, which changes the cache that is accessed.
+     *
+     * @param int $blog_id blog to switch to
+     */
+    public function switchToBlog($blog_id)
+    {
+        global $table_prefix;
+        $blog_id = (int) $blog_id;
+        $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).':';
+    }
+
+    /**
      * Wrapper to validate the cache keys expiration value.
      *
      * @param mixed $expiration Incomming expiration value (whatever it is)
@@ -273,35 +340,21 @@ class ObjectCacheBase
     }
 
     /**
-     * Switch blog prefix, which changes the cache that is accessed.
-     *
-     * @param int $blog_id blog to switch to
-     */
-    public function switchToBlog($blog_id)
-    {
-        global $table_prefix;
-        $blog_id = (int) $blog_id;
-        $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).':';
-    }
-
-    /**
-     * Is Memcached available?
-     *
      * @return bool
      */
-    protected function getServerStatus()
+    protected function isSuspendCacheAddition()
     {
-        return (bool) $this->m->getStats();
+        return \function_exists('wp_suspend_cache_addition') && wp_suspend_cache_addition();
     }
 
     /**
-     * @param $group
+     * @param string $group
      *
      * @return bool
      */
     protected function isIgnoredGroup($group)
     {
-        return \in_array($group, $this->ignored_groups);
+        return $this->ignored_groups->offsetExists($group);
     }
 
     /**
