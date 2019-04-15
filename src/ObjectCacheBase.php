@@ -267,9 +267,34 @@ class ObjectCacheBase
             $keys['salt'] = $this->cache_key_salt;
         }
 
-        $prefix = \in_array($group, $this->global_groups) ? $this->global_prefix : $this->blog_prefix;
+        // Set prefix
+        $keys['prefix'] = \in_array($group, $this->global_groups, true)
+            ? $this->global_prefix
+            : $this->blog_prefix;
 
-        return "{{$prefix}}:{$group}:{$key}";
+        // Set group & key
+        $keys['group'] = $group;
+        $keys['key'] = $key;
+
+        /**
+         * Filter the cache keys array.
+         *
+         * @since 5.0.0
+         *
+         * @param array  $keys  All cache key parts
+         * @param string $key   The current cache key
+         * @param string $group The current cache group
+         */
+        $keys = (array) apply_filters('wp_cache_key_parts', array_filter($keys), $key, $group);
+
+        // Assemble the cache key
+        $cache_key = implode($this->cache_key_separator, $keys);
+
+        // Prevent double separators
+        $cache_key = str_replace("{$this->cache_key_separator}{$this->cache_key_separator}", $this->cache_key_separator, $cache_key);
+
+        // Remove all whitespace
+        return preg_replace('/\s+/', '', $cache_key);
     }
 
     /**
