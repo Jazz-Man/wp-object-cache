@@ -85,6 +85,19 @@ class ObjectCacheBase
     private $cache;
 
     /**
+     * Salt to prefix all keys with.
+     *
+     * @var string
+     */
+    private $cache_key_salt = '';
+    /**
+     * Control character used to separate keys.
+     *
+     * @var string
+     */
+    private $cache_key_separator = ':';
+
+    /**
      * Instantiate the Memcached class.
      *
      * Instantiates the Memcached class and returns adds the servers specified
@@ -97,6 +110,8 @@ class ObjectCacheBase
     public function __construct($persistent_id = '')
     {
         global $blog_id, $table_prefix;
+
+        $this->setCacheKeySalt();
 
         $this->memcached = new Memcached(!empty($persistent_id) ? $persistent_id : '');
 
@@ -139,26 +154,17 @@ class ObjectCacheBase
         $options = [
             Memcached::OPT_NO_BLOCK => true,
             Memcached::OPT_COMPRESSION => true,
-            Memcached::OPT_PREFIX_KEY => $this->getMemcachedPrefix(),
+//            Memcached::OPT_PREFIX_KEY => $this->getMemcachedPrefix(),
         ];
 
         return $options;
     }
 
-    /**
-     * @return mixed
-     */
-    private function getMemcachedPrefix()
+    private function setCacheKeySalt()
     {
-        if (\defined('WP_CACHE_PREFIX')) {
-            return WP_CACHE_PREFIX;
+        if (\defined('WP_CACHE_KEY_SALT') && WP_CACHE_KEY_SALT) {
+            $this->cache_key_salt = rtrim(WP_CACHE_KEY_SALT, $this->cache_key_separator);
         }
-
-        $server_host = (string) $_SERVER['HTTP_HOST'];
-
-        $prefix = str_replace(['.', ':', '-'], '', $server_host);
-
-        return filter_var($prefix, FILTER_SANITIZE_URL) ?: '';
     }
 
     /**
@@ -248,6 +254,19 @@ class ObjectCacheBase
      */
     public function buildKey($key, $group = 'default')
     {
+        // Setup empty keys array
+        $keys = [];
+
+        // Force default group if none is passed
+        if (empty($group)) {
+            $group = 'default';
+        }
+
+        // Prefix with key salt if set
+        if (!empty($this->cache_key_salt)) {
+            $keys['salt'] = $this->cache_key_salt;
+        }
+
         $prefix = \in_array($group, $this->global_groups) ? $this->global_prefix : $this->blog_prefix;
 
         return "{{$prefix}}:{$group}:{$key}";
@@ -288,6 +307,40 @@ class ObjectCacheBase
     }
 
     /**
+     * Invalidate all items in the cache.
+     *
+     * @see http://www.php.net/manual/en/memcached.flush.php
+     *
+     * @param int $delay number of seconds to wait before invalidating the items
+     *
+     * @return bool returns TRUE on success or FALSE on failure
+     */
+    public function flush($delay = 0)
+    {
+        $result = false;
+
+        if ($this->getServerStatus()) {
+            $result = $this->memcached->flush($delay);
+
+            if ($this->isResSuccess()) {
+                $this->cache->exchangeArray([]);
+
+                $result = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isResSuccess()
+    {
+        return Memcached::RES_SUCCESS === $this->memcached->getResultCode();
+    }
+
+    /**
      * @param string $key
      *
      * @return bool
@@ -313,32 +366,6 @@ class ObjectCacheBase
     protected function hasCache($key)
     {
         return $this->cache->offsetExists($key);
-    }
-
-    /**
-     * Invalidate all items in the cache.
-     *
-     * @see http://www.php.net/manual/en/memcached.flush.php
-     *
-     * @param int $delay number of seconds to wait before invalidating the items
-     *
-     * @return bool returns TRUE on success or FALSE on failure
-     */
-    public function flush($delay = 0)
-    {
-        $result = false;
-
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->flush($delay);
-
-            if ($this->isResSuccess()) {
-                $this->cache->exchangeArray([]);
-
-                $result = true;
-            }
-        }
-
-        return $result;
     }
 
     /**
@@ -376,14 +403,6 @@ class ObjectCacheBase
     /**
      * @return bool
      */
-    protected function isResSuccess()
-    {
-        return Memcached::RES_SUCCESS === $this->memcached->getResultCode();
-    }
-
-    /**
-     * @return bool
-     */
     protected function isResNotfound()
     {
         return Memcached::RES_NOTFOUND === $this->memcached->getResultCode();
@@ -395,5 +414,21 @@ class ObjectCacheBase
     protected function isResNotstored()
     {
         return Memcached::RES_NOTSTORED === $this->memcached->getResultCode();
+    }
+
+    /**
+     * @return mixed
+     */
+    private function getMemcachedPrefix()
+    {
+        if (\defined('WP_CACHE_PREFIX')) {
+            return WP_CACHE_PREFIX;
+        }
+
+        $server_host = (string) $_SERVER['HTTP_HOST'];
+
+        $prefix = str_replace(['.', ':', '-'], '', $server_host);
+
+        return filter_var($prefix, FILTER_SANITIZE_URL) ?: '';
     }
 }
