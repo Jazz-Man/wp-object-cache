@@ -104,6 +104,17 @@ class ObjectCacheBase
      */
     protected $success_code = Memcached::RES_SUCCESS;
 
+    // Set values for handling expiration times
+
+    /**
+     * @var float|int
+     */
+    private $thirty_days;
+    /**
+     * @var int
+     */
+    private $now;
+
     /**
      * Instantiate the Memcached class.
      *
@@ -117,6 +128,9 @@ class ObjectCacheBase
     public function __construct($persistent_id = '')
     {
         global $blog_id, $table_prefix;
+
+        $this->thirty_days = DAY_IN_SECONDS * 30;
+        $this->now = time();
 
         $this->setCacheKeySalt();
 
@@ -409,7 +423,7 @@ class ObjectCacheBase
      */
     protected function validateExpiration($expiration)
     {
-        $expiration = \is_int($expiration) || ctype_digit($expiration) ? (int) $expiration : 0;
+        $expiration = ($expiration > $this->thirty_days) && ($expiration <= $this->now) ? $expiration + $this->now : 0;
 
         return $expiration;
     }
