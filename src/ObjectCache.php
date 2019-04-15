@@ -49,7 +49,7 @@ class ObjectCache extends ObjectCacheBase
 
             $result = $this->memcached->add($derived_key, $value, $expiration);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->setCache($derived_key, $value);
             }
 
@@ -97,7 +97,7 @@ class ObjectCache extends ObjectCacheBase
 
             $result = $this->memcached->replace($derived_key, $value, $expiration);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->setCache($derived_key, $value);
             }
 
@@ -149,7 +149,7 @@ class ObjectCache extends ObjectCacheBase
         if ($this->getServerStatus()) {
             $result = $this->memcached->decrement($derived_key, $offset);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->setCache($derived_key, $result);
             }
 
@@ -188,7 +188,7 @@ class ObjectCache extends ObjectCacheBase
         if ($this->getServerStatus()) {
             $result = $this->memcached->delete($derived_key, $time);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $result = $this->deleteCache($derived_key);
             }
 
@@ -298,7 +298,7 @@ class ObjectCache extends ObjectCacheBase
         if ($this->getServerStatus()) {
             $result = $this->memcached->increment($derived_key, (int) $offset);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->setCache($derived_key, $result);
             }
 
@@ -340,7 +340,7 @@ class ObjectCache extends ObjectCacheBase
 
             $result = $this->memcached->set($derived_key, $value, $expiration);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->setCache($derived_key, $result);
             }
 

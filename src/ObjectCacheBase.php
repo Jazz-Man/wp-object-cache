@@ -98,6 +98,13 @@ class ObjectCacheBase
     private $cache_key_separator = ':';
 
     /**
+     * Result code that determines successful cache interaction.
+     *
+     * @var int
+     */
+    protected $success_code = Memcached::RES_SUCCESS;
+
+    /**
      * Instantiate the Memcached class.
      *
      * Instantiates the Memcached class and returns adds the servers specified
@@ -347,7 +354,7 @@ class ObjectCacheBase
         if ($this->getServerStatus()) {
             $result = $this->memcached->flush($delay);
 
-            if ($this->isResSuccess()) {
+            if ($this->success()) {
                 $this->cache->exchangeArray([]);
 
                 $result = true;
@@ -360,9 +367,9 @@ class ObjectCacheBase
     /**
      * @return bool
      */
-    protected function isResSuccess()
+    protected function success()
     {
-        return Memcached::RES_SUCCESS === $this->memcached->getResultCode();
+        return $this->success_code === $this->memcached->getResultCode();
     }
 
     /**
