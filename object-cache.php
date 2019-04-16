@@ -207,7 +207,7 @@ function wp_cache_switch_to_blog($blog_id)
  */
 function wp_cache_add_global_groups($groups)
 {
-    wp_object_cache()->addGlobalGroups($groups);
+    wp_object_cache()->setGlobalGroups($groups);
 }
 
 /**
