@@ -11,41 +11,6 @@ use Memcached;
 class ObjectCacheBase
 {
     /**
-     * List of global groups.
-     *
-     * @var array
-     */
-    public $global_groups = [
-        // Users
-        'users',
-        'userlogins',
-        'usermeta',
-        'user_meta',
-        'useremail',
-        'userslugs',
-
-        // Networks & Sites
-        'site-transient',
-        'site-options',
-        'blog-lookup',
-        'blog-details',
-        'blog-id-cache',
-        'site-details',
-        'networks',
-        'sites',
-
-        // Posts
-        'rss',
-        'global-posts',
-        'options',
-        'posts',
-        'post_meta',
-        'query',
-        'terms',
-        'term_meta',
-        'themes',
-    ];
-    /**
      * Prefix used for global groups.
      *
      * @var string
@@ -57,6 +22,12 @@ class ObjectCacheBase
      * @var string
      */
     public $blog_prefix = '';
+    /**
+     * List of global groups.
+     *
+     * @var array
+     */
+    public $global_groups = [];
     /**
      * @var int
      */
@@ -72,6 +43,16 @@ class ObjectCacheBase
      */
     protected $memcached;
     /**
+     * Result code that determines successful cache interaction.
+     *
+     * @var int
+     */
+    protected $success_code = Memcached::RES_SUCCESS;
+    /**
+     * @var Memcached[]
+     */
+    private $mc;
+    /**
      * List of groups not saved to Memcached.
      *
      * @var ParameterBag
@@ -83,7 +64,6 @@ class ObjectCacheBase
      * @var ParameterBag
      */
     private $cache;
-
     /**
      * Salt to prefix all keys with.
      *
@@ -96,16 +76,6 @@ class ObjectCacheBase
      * @var string
      */
     private $cache_key_separator = ':';
-
-    /**
-     * Result code that determines successful cache interaction.
-     *
-     * @var int
-     */
-    protected $success_code = Memcached::RES_SUCCESS;
-
-    // Set values for handling expiration times
-
     /**
      * @var float|int
      */
@@ -114,6 +84,10 @@ class ObjectCacheBase
      * @var int
      */
     private $now;
+    /**
+     * @var bool
+     */
+    private $multisite;
 
     /**
      * Instantiate the Memcached class.
@@ -123,40 +97,169 @@ class ObjectCacheBase
      *
      * @see    http://www.php.net/manual/en/memcached.construct.php
      *
-     * @param string $persistent_id to create an instance that persists between requests, use persistent_id to specify a unique ID for the instance
+     * @param string $persistent_id to create an instance that persists between requests, use persistent_id to specify
+     *                              a unique ID for the instance
      */
     public function __construct($persistent_id = '')
     {
-        global $blog_id, $table_prefix;
-
+        $this->multisite = is_multisite();
         $this->thirty_days = DAY_IN_SECONDS * 30;
         $this->now = time();
 
         $this->setCacheKeySalt();
-
-        $this->memcached = new Memcached(!empty($persistent_id) ? $persistent_id : '');
+        $this->setPrefixes();
+        $this->setCacheGroups();
+        $this->setMemcached();
 
         $this->cache = new ParameterBag();
+    }
 
-        $this->ignored_groups = new ParameterBag(['comment', 'counts']);
+    private function setCacheKeySalt()
+    {
+        if (\defined('WP_CACHE_KEY_SALT') && WP_CACHE_KEY_SALT) {
+            $this->cache_key_salt = rtrim(WP_CACHE_KEY_SALT, $this->cache_key_separator);
+        }
+    }
 
-        $this->memcached->addServer((string) $this->getMemcachedHost(), (int) $this->getMemcachedPort());
+    // Set values for handling expiration times
 
-        $this->memcached->setOptions($this->getMemcachedOptions());
+    private function setPrefixes()
+    {
+        global $blog_id;
+        // Global prefix
+        $this->global_prefix = $this->multisite || (\defined('CUSTOM_USER_TABLE') && \defined('CUSTOM_USER_META_TABLE')) ? '' : (int) $blog_id;
 
-        // Assign global and blog prefixes for use with keys
-        if (\function_exists('is_multisite')) {
-            $this->global_prefix = (is_multisite() || (\defined('CUSTOM_USER_TABLE') && \defined('CUSTOM_USER_META_TABLE'))) ? '' : $table_prefix;
-            $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).':';
+        // Blog prefix
+        $this->blog_prefix = (int) $blog_id;
+    }
+
+    private function setCacheGroups()
+    {
+        if ($this->getServerStatus()) {
+            $groups = [
+                'users',
+                'userlogins',
+                'usermeta',
+                'user_meta',
+                'useremail',
+                'userslugs',
+                'site-transient',
+                'site-options',
+                'blog-lookup',
+                'blog-details',
+                'site-details',
+                'rss',
+                'global-posts',
+                'blog-id-cache',
+                'networks',
+                'sites',
+                'blog_meta',
+            ];
+
+            $groups_extendad = [
+                'category',
+                'posts',
+                'comment',
+                'default',
+                'customize_changeset_post',
+                'oembed_cache_post',
+                'timeinfo',
+                'calendar',
+                // Posts
+                'options',
+                'posts',
+                'post_meta',
+                'query',
+                'terms',
+                'term_meta',
+                'themes',
+                'bookmark',
+            ];
+
+            $ignored_groups = [
+                'counts',
+                'plugins',
+            ];
+
+            $this->ignored_groups = new ParameterBag($ignored_groups);
+            $this->global_groups = array_merge($groups_extendad, $groups);
         }
     }
 
     /**
-     * @return string
+     * Is Memcached available?
+     *
+     * @return bool
+     *
+     * @param mixed $group
      */
-    private function getMemcachedHost()
+    protected function getServerStatus($group)
     {
-        return \defined('WP_CACHE_HOST') ? WP_CACHE_HOST : '127.0.0.1';
+        return (bool) $this->getMc($group)->getStats();
+    }
+
+    private function setMemcached()
+    {
+        $memcached_servers = \function_exists('get_memcached_servers') ? get_memcached_servers() : null;
+
+        $buckets = $memcached_servers ?? ['127.0.0.1'];
+
+        reset($buckets);
+
+        if (\is_int(key($buckets))) {
+            $buckets = ['default' => $buckets];
+        }
+
+        foreach ($buckets as $bucket => $servers) {
+            $m = new Memcached('wpcache');
+            $m->setOptions($this->getMemcachedOptions());
+
+            $this->mc[$bucket] = $m;
+            $instances = [];
+            foreach ($servers as $server) {
+                list($node, $port) = explode(':', $server);
+
+                if (empty($port)) {
+                    $port = ini_get('memcache.default_port');
+                }
+                $port = (int) $port;
+                if (!$port) {
+                    $port = $this->getMemcachedPort();
+                }
+                $instances[] = [$node, $port, 1];
+            }
+            $this->mc[$bucket]->addServers($instances);
+        }
+    }
+
+    /**
+     * @return array
+     */
+    private function getMemcachedOptions()
+    {
+        $options = [
+            Memcached::OPT_NO_BLOCK => true,
+            Memcached::OPT_COMPRESSION => true,
+            Memcached::OPT_PREFIX_KEY => $this->getMemcachedPrefix(),
+        ];
+
+        return $options;
+    }
+
+    /**
+     * @return mixed
+     */
+    private function getMemcachedPrefix()
+    {
+        if (\defined('WP_CACHE_PREFIX')) {
+            return WP_CACHE_PREFIX;
+        }
+
+        $server_host = (string) $_SERVER['HTTP_HOST'];
+
+        $prefix = str_replace(['.', ':', '-'], '', $server_host);
+
+        return filter_var($prefix, FILTER_SANITIZE_URL) ?: '';
     }
 
     /**
@@ -168,32 +271,13 @@ class ObjectCacheBase
     }
 
     /**
-     * @return array
-     */
-    private function getMemcachedOptions()
-    {
-        $options = [
-            Memcached::OPT_NO_BLOCK => true,
-            Memcached::OPT_COMPRESSION => true,
-//            Memcached::OPT_PREFIX_KEY => $this->getMemcachedPrefix(),
-        ];
-
-        return $options;
-    }
-
-    private function setCacheKeySalt()
-    {
-        if (\defined('WP_CACHE_KEY_SALT') && WP_CACHE_KEY_SALT) {
-            $this->cache_key_salt = rtrim(WP_CACHE_KEY_SALT, $this->cache_key_separator);
-        }
-    }
-
-    /**
+     * @param $group
+     *
      * @return \Memcached
      */
-    public function getMemcached()
+    public function getMc($group = 'default')
     {
-        return $this->memcached;
+        return $this->mc[$group] ?? $this->mc['default'];
     }
 
     /**
@@ -201,28 +285,16 @@ class ObjectCacheBase
      *
      * @author  Ryan Boren   This function comes straight from the original WP Memcached Object cache
      *
-     * @see    http://wordpress.org/extend/plugins/memcached/
+     * @see     http://wordpress.org/extend/plugins/memcached/
      *
-     * @param array $groups array of groups
+     * @param string|array $groups array of groups
      */
-    public function addGlobalGroups($groups)
+    public function setGlobalGroups($groups)
     {
-        if ($this->getServerStatus()) {
-            $groups = (array) $groups;
+        $groups = (array) $groups;
 
-            $this->global_groups = array_merge($this->global_groups, $groups);
-            $this->global_groups = array_unique(array_filter($this->global_groups));
-        }
-    }
-
-    /**
-     * Is Memcached available?
-     *
-     * @return bool
-     */
-    protected function getServerStatus()
-    {
-        return (bool) $this->memcached->getStats();
+        $this->global_groups = array_merge($this->global_groups, $groups);
+        $this->global_groups = array_unique(array_filter($this->global_groups));
     }
 
     /**
@@ -230,20 +302,18 @@ class ObjectCacheBase
      *
      * @author  Ryan Boren   This function comes straight from the original WP Memcached Object cache
      *
-     * @see    http://wordpress.org/extend/plugins/memcached/
+     * @see     http://wordpress.org/extend/plugins/memcached/
      *
      * @param array $groups array of groups
      */
     public function addNonPersistentGroups($groups)
     {
-        if ($this->getServerStatus()) {
-            $groups = (array) $groups;
+        $groups = (array) $groups;
 
-            $ignored_groups = array_merge($this->ignored_groups->getArrayCopy(), $groups);
-            $ignored_groups = array_unique(array_filter($ignored_groups));
+        $ignored_groups = array_merge($this->ignored_groups->getArrayCopy(), $groups);
+        $ignored_groups = array_unique(array_filter($ignored_groups));
 
-            $this->ignored_groups->exchangeArray($ignored_groups);
-        }
+        $this->ignored_groups->exchangeArray($ignored_groups);
     }
 
     /**
@@ -266,7 +336,7 @@ class ObjectCacheBase
      *
      * @author  Ryan Boren   This function is inspired by the original WP Memcached Object cache.
      *
-     * @see    http://wordpress.org/extend/plugins/memcached/
+     * @see     http://wordpress.org/extend/plugins/memcached/
      *
      * @param string $key   the key under which to store the value
      * @param string $group the group value appended to the $key
@@ -289,9 +359,7 @@ class ObjectCacheBase
         }
 
         // Set prefix
-        $keys['prefix'] = \in_array($group, $this->global_groups, true)
-            ? $this->global_prefix
-            : $this->blog_prefix;
+        $keys['prefix'] = \in_array($group, $this->global_groups, true) ? $this->global_prefix : $this->blog_prefix;
 
         // Set group & key
         $keys['group'] = $group;
@@ -312,7 +380,8 @@ class ObjectCacheBase
         $cache_key = implode($this->cache_key_separator, $keys);
 
         // Prevent double separators
-        $cache_key = str_replace("{$this->cache_key_separator}{$this->cache_key_separator}", $this->cache_key_separator, $cache_key);
+        $cache_key = str_replace("{$this->cache_key_separator}{$this->cache_key_separator}", $this->cache_key_separator,
+            $cache_key);
 
         // Remove all whitespace
         return preg_replace('/\s+/', '', $cache_key);
@@ -363,27 +432,27 @@ class ObjectCacheBase
      */
     public function flush($delay = 0)
     {
+        if ($this->multisite) {
+            return true;
+        }
+
         $result = false;
 
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->flush($delay);
-
-            if ($this->success()) {
-                $this->cache->exchangeArray([]);
-
-                $result = true;
-            }
+        foreach ($this->mc as $group) {
+            $result = $group->flush($delay);
         }
 
         return $result;
     }
 
     /**
+     * @param string $group
+     *
      * @return bool
      */
-    protected function success()
+    protected function success($group)
     {
-        return $this->success_code === $this->memcached->getResultCode();
+        return $this->success_code === $this->getMc($group)->getResultCode();
     }
 
     /**
@@ -447,34 +516,30 @@ class ObjectCacheBase
     }
 
     /**
+     * @param string $group
+     *
      * @return bool
      */
-    protected function isResNotfound()
+    protected function isResNotfound($group)
     {
-        return Memcached::RES_NOTFOUND === $this->memcached->getResultCode();
+        return Memcached::RES_NOTFOUND === $this->getMc($group)->getResultCode();
     }
 
     /**
+     * @param string $group
+     *
      * @return bool
      */
-    protected function isResNotstored()
+    protected function isResNotstored($group)
     {
-        return Memcached::RES_NOTSTORED === $this->memcached->getResultCode();
+        return Memcached::RES_NOTSTORED === $this->getMc($group)->getResultCode();
     }
 
     /**
-     * @return mixed
+     * @return string
      */
-    private function getMemcachedPrefix()
+    private function getMemcachedHost()
     {
-        if (\defined('WP_CACHE_PREFIX')) {
-            return WP_CACHE_PREFIX;
-        }
-
-        $server_host = (string) $_SERVER['HTTP_HOST'];
-
-        $prefix = str_replace(['.', ':', '-'], '', $server_host);
-
-        return filter_var($prefix, FILTER_SANITIZE_URL) ?: '';
+        return \defined('WP_CACHE_HOST') ? WP_CACHE_HOST : '127.0.0.1';
     }
 }

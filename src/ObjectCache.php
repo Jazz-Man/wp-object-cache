@@ -42,14 +42,14 @@ class ObjectCache extends ObjectCacheBase
             return true;
         }
 
-        if ($this->getServerStatus()) {
+        if ($this->getServerStatus($group)) {
             $expiration = $this->validateExpiration($expiration);
 
             $value = maybe_serialize($value);
 
-            $result = $this->memcached->add($derived_key, $value, $expiration);
+            $result = $this->getMc($group)->add($derived_key, $value, $expiration);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $this->setCache($derived_key, $value);
             }
 
@@ -90,14 +90,14 @@ class ObjectCache extends ObjectCacheBase
             return $result;
         }
 
-        if ($this->getServerStatus()) {
+        if ($this->getServerStatus($group)) {
             $expiration = $this->validateExpiration($expiration);
 
             $value = maybe_serialize($value);
 
-            $result = $this->memcached->replace($derived_key, $value, $expiration);
+            $result = $this->getMc($group)->replace($derived_key, $value, $expiration);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $this->setCache($derived_key, $value);
             }
 
@@ -146,10 +146,10 @@ class ObjectCache extends ObjectCacheBase
             return $result;
         }
 
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->decrement($derived_key, $offset);
+        if ($this->getServerStatus($group)) {
+            $result = $this->getMc($group)->decrement($derived_key, $offset);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $this->setCache($derived_key, $result);
             }
 
@@ -185,10 +185,10 @@ class ObjectCache extends ObjectCacheBase
             return $this->deleteCache($derived_key);
         }
 
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->delete($derived_key, $time);
+        if ($this->getServerStatus($group)) {
+            $result = $this->getMc($group)->delete($derived_key, $time);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $result = $this->deleteCache($derived_key);
             }
 
@@ -231,10 +231,10 @@ class ObjectCache extends ObjectCacheBase
             return $this->getCache($derived_key);
         }
 
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->get($derived_key);
+        if ($this->getServerStatus($group)) {
+            $result = $this->getMc($group)->get($derived_key);
 
-            if ($this->isResNotfound()) {
+            if ($this->isResNotfound($group)) {
                 $found = false;
                 ++$this->cache_misses;
 
@@ -295,10 +295,10 @@ class ObjectCache extends ObjectCacheBase
             return false;
         }
 
-        if ($this->getServerStatus()) {
-            $result = $this->memcached->increment($derived_key, (int) $offset);
+        if ($this->getServerStatus($group)) {
+            $result = $this->getMc($group)->increment($derived_key, (int) $offset);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $this->setCache($derived_key, $result);
             }
 
@@ -334,13 +334,13 @@ class ObjectCache extends ObjectCacheBase
             return true;
         }
 
-        if ($this->getServerStatus()) {
+        if ($this->getServerStatus($group)) {
             $expiration = $this->validateExpiration($expiration);
             $value = maybe_serialize($value);
 
-            $result = $this->memcached->set($derived_key, $value, $expiration);
+            $result = $this->getMc($group)->set($derived_key, $value, $expiration);
 
-            if ($this->success()) {
+            if ($this->success($group)) {
                 $this->setCache($derived_key, $result);
             }
 
