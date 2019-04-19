@@ -3,6 +3,15 @@
 use JazzMan\WPObjectCache\ObjectCache;
 use JazzMan\WPObjectCache\OutputCache;
 
+
+/**
+ * @return bool
+ */
+function wp_cache_close(){
+
+    return true;
+}
+
 /**
  * Adds a value to cache.
  *
@@ -102,7 +111,7 @@ function wp_cache_flush($delay = 0)
  *
  * @return bool|mixed cached object value
  */
-function wp_cache_get($key, $group, $force, $found)
+function wp_cache_get($key, $group = 'default', $force = false, &$found = null)
 {
     return wp_object_cache()->get($key, $group, $force, $found);
 }
