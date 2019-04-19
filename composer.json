@@ -20,7 +20,9 @@
     "php": ">=7.0",
     "ext-memcached": "*",
     "composer/installers": "^1",
-    "jazzman/parameter-bag": "^1.2"
+    "jazzman/parameter-bag": "^1.2",
+    "jazzman/singleton-trait": "^1.1",
+    "phpfastcache/phpfastcache": "^7.0"
   },
   "require-dev": {
     "roave/security-advisories": "dev-master"
@@ -28,6 +30,9 @@
   "autoload": {
     "psr-4": {
       "JazzMan\\WPObjectCache\\": "src"
-    }
+    },
+    "files": [
+      "helper.php"
+    ]
   }
 }

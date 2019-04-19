@@ -106,10 +106,11 @@ class ObjectCacheBase
         $this->thirty_days = DAY_IN_SECONDS * 30;
         $this->now = time();
 
+
+        $this->setMemcached();
         $this->setCacheKeySalt();
         $this->setPrefixes();
         $this->setCacheGroups();
-        $this->setMemcached();
 
         $this->cache = new ParameterBag();
     }
@@ -193,7 +194,7 @@ class ObjectCacheBase
      *
      * @param mixed $group
      */
-    protected function getServerStatus($group)
+    protected function getServerStatus($group = 'default')
     {
         return (bool) $this->getMc($group)->getStats();
     }
@@ -202,7 +203,7 @@ class ObjectCacheBase
     {
         $memcached_servers = \function_exists('get_memcached_servers') ? get_memcached_servers() : null;
 
-        $buckets = $memcached_servers ?? ['127.0.0.1'];
+        $buckets = $memcached_servers ?? ['127.0.0.1:11211'];
 
         reset($buckets);
 
