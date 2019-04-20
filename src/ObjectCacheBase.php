@@ -4,6 +4,7 @@ namespace JazzMan\WPObjectCache;
 
 use JazzMan\ParameterBag\ParameterBag;
 use Memcached;
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
 
 /**
  * Class ObjectCacheBase.
@@ -88,6 +89,18 @@ class ObjectCacheBase
      * @var bool
      */
     private $multisite;
+    /**
+     * @var \JazzMan\WPObjectCache\ObjectCacheDriver
+     */
+    private $object_cache;
+    /**
+     * @var \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
+     */
+    private $driver;
+    /**
+     * @var \Phpfastcache\Drivers\Memstatic\Driver
+     */
+    private $_cache;
 
     /**
      * Instantiate the Memcached class.
@@ -102,10 +115,15 @@ class ObjectCacheBase
      */
     public function __construct($persistent_id = '')
     {
+        $this->object_cache = app_object_cache();
+
+        $this->driver = $this->object_cache->getCacheInstance();
+
+        $this->_cache = $this->object_cache->getMemstatic();
+
         $this->multisite = is_multisite();
         $this->thirty_days = DAY_IN_SECONDS * 30;
         $this->now = time();
-
 
         $this->setMemcached();
         $this->setCacheKeySalt();
@@ -390,6 +408,42 @@ class ObjectCacheBase
 
     /**
      * @param string $key
+     * @param string $group
+     *
+     * @return bool|\Phpfastcache\Core\Item\ExtendedCacheItemInterface
+     */
+    protected function getItem($key, $group)
+    {
+        $item = false;
+        try {
+            $key = $this->sanitizeKey($key, $group);
+            $item = $this->driver->getItem($key);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            dump($e->getMessage());
+        }
+
+        return $item;
+    }
+
+    /**
+     * @param string $key
+     * @param string $group
+     *
+     * @return string
+     */
+    private function sanitizeKey(string $key, string $group)
+    {
+        $key = strtolower($key);
+        $group = strtolower($group);
+
+        $key = preg_replace('/[^a-z0-9_\-]/', '', $key);
+        $group = preg_replace('/[^a-z0-9_\-]/', '', $group);
+
+        return "{$group}_{$key}";
+    }
+
+    /**
+     * @param string $key
      * @param bool   $default
      *
      * @return mixed|null
@@ -404,10 +458,24 @@ class ObjectCacheBase
     /**
      * @param string $key
      * @param mixed  $value
+     * @param string $group
+     *
+     * @return bool|mixed
      */
-    protected function setCache($key, $value)
+    protected function setCache(string $key, $value, string $group = 'default')
     {
-        $this->cache->offsetSet($key, $value);
+        $result = false;
+        $key = $this->sanitizeKey($key, $group);
+        try {
+            $item = $this->_cache->getItem($key);
+            $item->addTag($group);
+            $item->set($value);
+
+            $result = $this->_cache->save($item);
+        } catch (\Exception $e) {
+        }
+
+        return $result;
     }
 
     /**
