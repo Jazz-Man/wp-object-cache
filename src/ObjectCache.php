@@ -2,6 +2,8 @@
 
 namespace JazzMan\WPObjectCache;
 
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
+
 /**
  * Class ObjectCache.
  */
@@ -22,7 +24,7 @@ class ObjectCache extends ObjectCacheBase
      *
      * @return bool returns TRUE on success or FALSE on failure
      */
-    public function add($key, $value, $group = 'default', $expiration = 0)
+    public function add(string $key, $value, $group = 'default', $expiration = 0)
     {
         $result = false;
 
@@ -30,33 +32,21 @@ class ObjectCache extends ObjectCacheBase
             return $result;
         }
 
-        $derived_key = $this->buildKey($key, $group);
+        $key = $this->sanitizeKey($key, $group);
+
+        $value = maybe_serialize($value);
 
         if ($this->isIgnoredGroup($group)) {
-            if ($this->hasCache($derived_key)) {
-                return $result;
-            }
-
-            $this->setCache($derived_key, $value);
-
-            return true;
+            return $this->setCache($key, $value, $group);
         }
 
-        if ($this->getServerStatus($group)) {
-            $expiration = $this->validateExpiration($expiration);
+        $expiration = $this->validateExpiration($expiration);
 
-            $value = maybe_serialize($value);
+        $item = $this->getItem($key, $group);
 
-            $result = $this->getMc($group)->add($derived_key, $value, $expiration);
+        $item->set($value)->expiresAfter($expiration);
 
-            if ($this->success($group)) {
-                $this->setCache($derived_key, $value);
-            }
-
-            return $result;
-        }
-
-        return $result;
+        return $this->driver->save($item);
     }
 
     /**
@@ -80,9 +70,11 @@ class ObjectCache extends ObjectCacheBase
 
         $derived_key = $this->buildKey($key, $group);
 
+        $key = $this->sanitizeKey($key, $group);
+
         if ($this->isIgnoredGroup($group)) {
-            if ($this->hasCache($derived_key)) {
-                $this->setCache($derived_key, $value);
+            if ($this->hasCache($key)) {
+                $this->setCache($key, $value, $group);
 
                 return true;
             }
@@ -98,7 +90,7 @@ class ObjectCache extends ObjectCacheBase
             $result = $this->getMc($group)->replace($derived_key, $value, $expiration);
 
             if ($this->success($group)) {
-                $this->setCache($derived_key, $value);
+                $this->setCache($derived_key, $value, $group);
             }
 
             return $result;
@@ -123,6 +115,7 @@ class ObjectCache extends ObjectCacheBase
     {
         $result = false;
         $derived_key = $this->buildKey($key, $group);
+        $key = $this->sanitizeKey($key, $group);
 
         // If group is a non-Memcached group, save to internal cache, not Memcached
         if ($this->isIgnoredGroup($group)) {
@@ -138,7 +131,7 @@ class ObjectCache extends ObjectCacheBase
                     $value = 0;
                 }
 
-                $this->setCache($derived_key, $value);
+                $this->setCache($key, $value, $group);
 
                 return $value;
             }
@@ -150,7 +143,7 @@ class ObjectCache extends ObjectCacheBase
             $result = $this->getMc($group)->decrement($derived_key, $offset);
 
             if ($this->success($group)) {
-                $this->setCache($derived_key, $result);
+                $this->setCache($key, $result, $group);
             }
 
             return $result;
@@ -180,9 +173,10 @@ class ObjectCache extends ObjectCacheBase
         $result = false;
 
         $derived_key = $this->buildKey($key, $group);
+        $key = $this->sanitizeKey($key, $group);
 
         if ($this->isIgnoredGroup($group)) {
-            return $this->deleteCache($derived_key);
+            return $this->deleteCache($key);
         }
 
         if ($this->getServerStatus($group)) {
@@ -219,37 +213,35 @@ class ObjectCache extends ObjectCacheBase
      *
      * @return bool|mixed cached object value
      */
-    public function get($key, $group = 'default', $force = false, &$found = null)
+    public function get(string $key, $group = 'default', $force = false, &$found = null)
     {
         $result = false;
-        $derived_key = $this->buildKey($key, $group);
 
-        if ($this->isIgnoredGroup($group) && $this->hasCache($derived_key) && !$force) {
-            $found = true;
-            ++$this->cache_hits;
+        $key = $this->sanitizeKey($key, $group);
 
-            return $this->getCache($derived_key);
-        }
+        if ($this->isIgnoredGroup($group) && !$force) {
+            $result = $this->getCache($key);
 
-        if ($this->getServerStatus($group)) {
-            $result = $this->getMc($group)->get($derived_key);
-
-            if ($this->isResNotfound($group)) {
-                $found = false;
-                ++$this->cache_misses;
-
-                return false;
+            if ($result) {
+                $found = true;
             }
 
-            $found = true;
+            return $result;
+        }
 
-            ++$this->cache_hits;
+        try {
+            $item = $this->driver->getItem($key);
 
-            $value = maybe_unserialize($result);
+            if ($item->isNull()) {
+                $found = false;
 
-            $this->setCache($derived_key, $value);
+                $result = false;
+            } else {
+                $value = maybe_unserialize($item->get());
 
-            return \is_object($value) ? clone $value : $value;
+                $result = \is_object($value) ? clone $value : $value;
+            }
+        } catch (PhpfastcacheInvalidArgumentException $e) {
         }
 
         return $result;
@@ -273,8 +265,10 @@ class ObjectCache extends ObjectCacheBase
         $result = false;
         $derived_key = $this->buildKey($key, $group);
 
+        $key = $this->sanitizeKey($key, $group);
+
         if ($this->isIgnoredGroup($group)) {
-            $value = $this->getCache($derived_key);
+            $value = $this->getCache($key);
 
             if ($value && $value >= 0) {
                 if (is_numeric($value)) {
@@ -287,7 +281,7 @@ class ObjectCache extends ObjectCacheBase
                     $value = 0;
                 }
 
-                $this->setCache($derived_key, $value);
+                $this->setCache($key, $value, $group);
 
                 return $value;
             }
@@ -299,7 +293,7 @@ class ObjectCache extends ObjectCacheBase
             $result = $this->getMc($group)->increment($derived_key, (int) $offset);
 
             if ($this->success($group)) {
-                $this->setCache($derived_key, $result);
+                $this->setCache($key, $result, $group);
             }
 
             return $result;
@@ -322,29 +316,25 @@ class ObjectCache extends ObjectCacheBase
      *
      * @return bool returns TRUE on success or FALSE on failure
      */
-    public function set($key, $value, $group = 'default', $expiration = 0)
+    public function set(string $key, $value, $group = 'default', $expiration = 0)
     {
         $result = false;
 
-        $derived_key = $this->buildKey($key, $group);
+        $key = $this->sanitizeKey($key, $group);
+        $expiration = $this->validateExpiration($expiration);
+        $value = maybe_serialize($value);
 
         if ($this->isIgnoredGroup($group)) {
-            $this->setCache($derived_key, $value);
+            $this->setCache($key, $value, $group);
 
             return true;
         }
 
-        if ($this->getServerStatus($group)) {
-            $expiration = $this->validateExpiration($expiration);
-            $value = maybe_serialize($value);
-
-            $result = $this->getMc($group)->set($derived_key, $value, $expiration);
-
-            if ($this->success($group)) {
-                $this->setCache($derived_key, $result);
-            }
-
-            return $result;
+        try {
+            $item = $this->driver->getItem($key);
+            $item->set($value)->expiresAfter($expiration);
+            $result = $this->driver->save($item);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
         }
 
         return $result;
