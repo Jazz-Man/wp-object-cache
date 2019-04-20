@@ -16,10 +16,41 @@ class ObjectCacheDriver
     use SingletonTrait;
 
     /**
+     * @var array|bool
+     */
+    private $cache_servers = false;
+    /**
+     * @var string
+     */
+    private $cache_host = '127.0.0.1';
+    /**
+     * @var int|bool
+     */
+    private $cache_port = false;
+    /**
+     * @var int|bool
+     */
+    private $cache_timeout = false;
+    /**
+     * @var string|bool
+     */
+    private $cache_user = false;
+    /**
+     * @var string|bool
+     */
+    private $cache_pass = false;
+    /**
+     * @var int|bool
+     */
+    private $cache_db = false;
+    /**
+     * @var string|bool
+     */
+    private $cache_prefix = false;
+    /**
      * @var string
      */
     private $driver;
-
     /**
      * @var ConfigurationOption|null
      */
@@ -36,6 +67,8 @@ class ObjectCacheDriver
 
     private function __construct()
     {
+        $this->setCacheConfig();
+
         try {
             $this->driverSet();
 
@@ -47,22 +80,43 @@ class ObjectCacheDriver
         }
     }
 
+    private function setCacheConfig()
+    {
+        foreach (
+            [
+                'servers',
+                'host',
+                'port',
+                'timeout',
+                'user',
+                'pass',
+                'db',
+                'prefix',
+            ] as $setting
+        ) {
+            $constant = sprintf('WP_CACHE_%s', strtoupper($setting));
+            if (\defined($constant)) {
+                $this->{"cache_$setting"} = \constant($constant);
+            }
+        }
+    }
+
     /**
      * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidConfigurationException
      * @throws \ReflectionException
      */
     private function driverSet()
     {
-        $cache_servers = \defined('WP_CACHE_SERVERS') ? WP_CACHE_SERVERS : false;
-        $cache_host = \defined('WP_CACHE_HOST') ? WP_CACHE_HOST : '127.0.0.1';
-        $cache_port = \defined('WP_CACHE_PORT') ? WP_CACHE_PORT : false;
-        $cache_timeout = \defined('WP_CACHE_TIMEOUT') ? WP_CACHE_TIMEOUT : false;
-        $cache_user = \defined('WP_CACHE_USERNAME') ? WP_CACHE_USERNAME : false;
-        $cache_pass = \defined('WP_CACHE_PASSWORD') ? WP_CACHE_PASSWORD : false;
-        $cache_db = \defined('WP_CACHE_DATABASE') ? WP_CACHE_DATABASE : false;
-        $cache_prefix = \defined('WP_CACHE_PREFIX') ? WP_CACHE_PREFIX : false;
+        $cache_servers = $this->getCacheServers();
+        $cache_host = $this->getCacheHost();
+        $cache_port = $this->getCachePort();
+        $cache_timeout = $this->getCacheTimeout();
+        $cache_user = $this->getCacheUser();
+        $cache_pass = $this->getCachePass();
+        $cache_db = $this->getCacheDb();
+        $cache_prefix = $this->getCachePrefix();
 
-        if (\extension_loaded('Redis')) {
+        if (self::hasRedis()) {
             $this->driver = 'Redis';
 
             $this->driver_config = new RC([
@@ -88,7 +142,8 @@ class ObjectCacheDriver
 
             return;
         }
-        if (class_exists('Memcached')) {
+
+        if (self::hasMemcached()) {
             $this->driver = 'Memcached';
 
             $this->driver_global_config['compressData'] = true;
@@ -112,11 +167,101 @@ class ObjectCacheDriver
             return;
         }
 
-        if (\extension_loaded('apcu') && ini_get('apc.enabled')) {
+        if (self::hasApcu()) {
             $this->driver = 'Apcu';
 
             return;
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasRedis()
+    {
+        return \extension_loaded('Redis');
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasMemcached()
+    {
+        return class_exists('Memcached');
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasApcu()
+    {
+        return \extension_loaded('apcu') && ini_get('apc.enabled');
+    }
+
+
+    /**
+     * @return array|bool
+     */
+    public function getCacheServers()
+    {
+        return $this->cache_servers;
+    }
+
+
+    /**
+     * @return string
+     */
+    public function getCacheHost()
+    {
+        return $this->cache_host;
+    }
+
+    /**
+     * @return bool|int
+     */
+    public function getCachePort()
+    {
+        return $this->cache_port;
+    }
+
+    /**
+     * @return bool|int
+     */
+    public function getCacheTimeout()
+    {
+        return $this->cache_timeout;
+    }
+
+    /**
+     * @return bool|string
+     */
+    public function getCacheUser()
+    {
+        return $this->cache_user;
+    }
+
+    /**
+     * @return bool|string
+     */
+    public function getCachePass()
+    {
+        return $this->cache_pass;
+    }
+
+    /**
+     * @return bool|int
+     */
+    public function getCacheDb()
+    {
+        return $this->cache_db;
+    }
+
+    /**
+     * @return bool|string
+     */
+    public function getCachePrefix()
+    {
+        return $this->cache_prefix;
     }
 
     /**
