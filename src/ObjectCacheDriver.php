@@ -6,6 +6,7 @@ use JazzMan\Traits\SingletonTrait;
 use Phpfastcache\CacheManager;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Drivers\Memcached\Config as MC;
+use Phpfastcache\Drivers\Memstatic\Driver;
 use Phpfastcache\Drivers\Redis\Config as RC;
 
 /**
@@ -55,6 +56,9 @@ class ObjectCacheDriver
      * @var ConfigurationOption|null
      */
     private $driver_config;
+    /**
+     * @var array
+     */
     private $driver_global_config = [
         'itemDetailedDate' => true,
         'preventCacheSlams' => true,
@@ -64,6 +68,10 @@ class ObjectCacheDriver
      * @var \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
     private $cache_instance;
+    /**
+     * @var Driver
+     */
+    private $memstatic;
 
     private function __construct()
     {
@@ -75,6 +83,8 @@ class ObjectCacheDriver
             CacheManager::setDefaultConfig(new ConfigurationOption($this->driver_global_config));
 
             $this->cache_instance = CacheManager::getInstance($this->driver, $this->driver_config ?: null);
+
+            $this->memstatic = CacheManager::getInstance('memstatic');
         } catch (\Exception $e) {
             dump($e->getMessage());
         }
@@ -175,38 +185,12 @@ class ObjectCacheDriver
     }
 
     /**
-     * @return bool
-     */
-    public static function hasRedis()
-    {
-        return \extension_loaded('Redis');
-    }
-
-    /**
-     * @return bool
-     */
-    public static function hasMemcached()
-    {
-        return class_exists('Memcached');
-    }
-
-    /**
-     * @return bool
-     */
-    public static function hasApcu()
-    {
-        return \extension_loaded('apcu') && ini_get('apc.enabled');
-    }
-
-
-    /**
      * @return array|bool
      */
     public function getCacheServers()
     {
         return $this->cache_servers;
     }
-
 
     /**
      * @return string
@@ -262,6 +246,38 @@ class ObjectCacheDriver
     public function getCachePrefix()
     {
         return $this->cache_prefix;
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasRedis()
+    {
+        return \extension_loaded('Redis');
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasMemcached()
+    {
+        return class_exists('Memcached');
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasApcu()
+    {
+        return \extension_loaded('apcu') && ini_get('apc.enabled');
+    }
+
+    /**
+     * @return \Phpfastcache\Drivers\Memstatic\Driver
+     */
+    public function getMemstatic()
+    {
+        return $this->memstatic;
     }
 
     /**
