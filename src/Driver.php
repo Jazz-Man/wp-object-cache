@@ -6,13 +6,13 @@ use JazzMan\Traits\SingletonTrait;
 use Phpfastcache\CacheManager;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Drivers\Memcached\Config as MC;
-use Phpfastcache\Drivers\Memstatic\Driver;
+use Phpfastcache\Drivers\Memstatic\Driver as MemstaticDriver;
 use Phpfastcache\Drivers\Redis\Config as RC;
 
 /**
  * Class ObjectCacheDriver.
  */
-class ObjectCacheDriver
+class Driver
 {
     use SingletonTrait;
 
@@ -69,7 +69,7 @@ class ObjectCacheDriver
      */
     private $cache_instance;
     /**
-     * @var Driver
+     * @var MemstaticDriver
      */
     private $memstatic;
 
