@@ -1,10 +1,10 @@
 <?php
-use JazzMan\WPObjectCache\ObjectCacheDriver;
+use JazzMan\WPObjectCache\Driver;
 
 /**
- * @return \JazzMan\WPObjectCache\ObjectCacheDriver
+ * @return \JazzMan\WPObjectCache\Driver
  */
 function app_object_cache()
 {
-    return ObjectCacheDriver::getInstance();
+    return Driver::getInstance();
 }
