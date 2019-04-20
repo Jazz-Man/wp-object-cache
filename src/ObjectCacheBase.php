@@ -4,13 +4,16 @@ namespace JazzMan\WPObjectCache;
 
 use JazzMan\ParameterBag\ParameterBag;
 use Memcached;
+use Phpfastcache\Exceptions\PhpfastcacheCoreException;
 use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
+use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 
 /**
  * Class ObjectCacheBase.
  */
 class ObjectCacheBase
 {
+    use InternalCache;
     /**
      * Prefix used for global groups.
      *
@@ -90,13 +93,13 @@ class ObjectCacheBase
      */
     private $multisite;
     /**
-     * @var \JazzMan\WPObjectCache\ObjectCacheDriver
+     * @var \JazzMan\WPObjectCache\Driver
      */
     private $object_cache;
     /**
      * @var \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
-    private $driver;
+    protected $driver;
     /**
      * @var \Phpfastcache\Drivers\Memstatic\Driver
      */
@@ -416,8 +419,8 @@ class ObjectCacheBase
     {
         $item = false;
         try {
-            $key = $this->sanitizeKey($key, $group);
             $item = $this->driver->getItem($key);
+            $item->addTag($group);
         } catch (PhpfastcacheInvalidArgumentException $e) {
             dump($e->getMessage());
         }
@@ -431,7 +434,7 @@ class ObjectCacheBase
      *
      * @return string
      */
-    private function sanitizeKey(string $key, string $group)
+    protected function sanitizeKey(string $key, string $group)
     {
         $key = strtolower($key);
         $group = strtolower($group);
@@ -440,42 +443,6 @@ class ObjectCacheBase
         $group = preg_replace('/[^a-z0-9_\-]/', '', $group);
 
         return "{$group}_{$key}";
-    }
-
-    /**
-     * @param string $key
-     * @param bool   $default
-     *
-     * @return mixed|null
-     */
-    protected function getCache($key, $default = false)
-    {
-        $data = $this->cache->get($key, $default);
-
-        return \is_object($data) ? clone $data : $data;
-    }
-
-    /**
-     * @param string $key
-     * @param mixed  $value
-     * @param string $group
-     *
-     * @return bool|mixed
-     */
-    protected function setCache(string $key, $value, string $group = 'default')
-    {
-        $result = false;
-        $key = $this->sanitizeKey($key, $group);
-        try {
-            $item = $this->_cache->getItem($key);
-            $item->addTag($group);
-            $item->set($value);
-
-            $result = $this->_cache->save($item);
-        } catch (\Exception $e) {
-        }
-
-        return $result;
     }
 
     /**
@@ -522,34 +489,6 @@ class ObjectCacheBase
     protected function success($group)
     {
         return $this->success_code === $this->getMc($group)->getResultCode();
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool
-     */
-    protected function deleteCache($key)
-    {
-        $result = false;
-
-        if ($this->hasCache($key)) {
-            $this->cache->offsetUnset($key);
-
-            $result = true;
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool
-     */
-    protected function hasCache($key)
-    {
-        return $this->cache->offsetExists($key);
     }
 
     /**
@@ -604,11 +543,4 @@ class ObjectCacheBase
         return Memcached::RES_NOTSTORED === $this->getMc($group)->getResultCode();
     }
 
-    /**
-     * @return string
-     */
-    private function getMemcachedHost()
-    {
-        return \defined('WP_CACHE_HOST') ? WP_CACHE_HOST : '127.0.0.1';
-    }
 }
