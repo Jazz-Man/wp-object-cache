@@ -350,7 +350,7 @@ class ObjectCacheBase
     {
         $derived_key = $this->buildKey($key, $group);
 
-        return $this->getCache($derived_key);
+        return $this->getInternalCache($derived_key);
     }
 
     /**
