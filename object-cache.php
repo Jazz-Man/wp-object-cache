@@ -1,14 +1,13 @@
 <?php
 
-use JazzMan\WPObjectCache\ObjectCache;
+use JazzMan\WPObjectCache\DriverAdapter;
 use JazzMan\WPObjectCache\OutputCache;
-
 
 /**
  * @return bool
  */
-function wp_cache_close(){
-
+function wp_cache_close()
+{
     return true;
 }
 
@@ -33,7 +32,6 @@ function wp_cache_add($key, $value, $group = '', $expiration = 0)
     return wp_object_cache()->add($key, $value, $group, $expiration);
 }
 
-
 /**
  * Decrement a numeric item's value.
  *
@@ -51,7 +49,7 @@ function wp_cache_add($key, $value, $group = '', $expiration = 0)
  */
 function wp_cache_decr($key, $offset = 1, $group = '')
 {
-    return wp_object_cache()->decr($key, $offset, $group);
+    return wp_object_cache()->decrement($key, $offset, $group);
 }
 
 /**
@@ -116,24 +114,6 @@ function wp_cache_get($key, $group = 'default', $force = false, &$found = null)
     return wp_object_cache()->get($key, $group, $force, $found);
 }
 
-
-/**
- * Retrieve a cache key based on key & group.
- *
- *
- * @see http://www.php.net/manual/en/memcached.get.php
- *
- * @param string $key   the key under which a value is stored
- * @param string $group the group value appended to the $key
- *
- * @return string returns the cache key used for getting & setting
- */
-function wp_cache_get_key($key, $group = '')
-{
-    return wp_object_cache()->buildKey($key, $group);
-}
-
-
 /**
  * Increment a numeric item's value.
  *
@@ -151,9 +131,8 @@ function wp_cache_get_key($key, $group = '')
  */
 function wp_cache_incr($key, $offset = 1, $group = '')
 {
-    return wp_object_cache()->incr($key, $offset, $group);
+    return wp_object_cache()->increment($key, $offset, $group);
 }
-
 
 /**
  * Replaces a value in cache.
@@ -175,7 +154,6 @@ function wp_cache_replace($key, $value, $group = '', $expiration = 0)
 {
     return wp_object_cache()->replace($key, $value, $group, $expiration);
 }
-
 
 /**
  * Sets a value in cache.
@@ -227,7 +205,7 @@ function wp_cache_add_global_groups($groups)
  */
 function wp_cache_add_non_persistent_groups($groups)
 {
-    wp_object_cache()->addNonPersistentGroups($groups);
+    wp_object_cache()->setIgnoredGroups($groups);
 }
 
 /**
@@ -239,9 +217,7 @@ function wp_cache_init()
 }
 
 /**
- * Returns the Object Cache Global.
- *
- * @return ObjectCache
+ * @return DriverAdapter
  */
 function wp_object_cache()
 {
@@ -257,7 +233,7 @@ function wp_object_cache()
  */
 function wp_object_cache_init()
 {
-    $GLOBALS['wp_object_cache'] = new ObjectCache();
+    $GLOBALS['wp_object_cache'] = new DriverAdapter();
 }
 
 /**
