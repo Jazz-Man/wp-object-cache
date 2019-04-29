@@ -12,77 +12,45 @@ function wp_cache_close()
 }
 
 /**
- * Adds a value to cache.
+ * @param string|array           $key
+ * @param                        $value
+ * @param string                 $group
+ * @param int|\DateInterval|null $expiration
  *
- * If the specified key already exists, the value is not stored and the function
- * returns false.
- *
- *
- * @see http://www.php.net/manual/en/memcached.add.php
- *
- * @param string $key        the key under which to store the value
- * @param mixed  $value      the value to store
- * @param string $group      the group value appended to the $key
- * @param int    $expiration the expiration time, defaults to 0
- *
- * @return bool returns TRUE on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_add($key, $value, $group = '', $expiration = 0)
+function wp_cache_add($key, $value, string $group = 'default', $expiration = 0)
 {
     return wp_object_cache()->add($key, $value, $group, $expiration);
 }
 
 /**
- * Decrement a numeric item's value.
+ * @param string|array $key
+ * @param int          $offset
+ * @param string       $group
  *
- * Same as wp_cache_decrement. Original WordPress caching backends use wp_cache_decr. I
- * want both spellings to work.
- *
- *
- * @see http://www.php.net/manual/en/memcached.decrement.php
- *
- * @param string $key    the key under which to store the value
- * @param int    $offset the amount by which to decrement the item's value
- * @param string $group  the group value appended to the $key
- *
- * @return int|bool returns item's new value on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_decr($key, $offset = 1, $group = '')
+function wp_cache_decr($key, $offset = 1, string $group = 'default')
 {
     return wp_object_cache()->decrement($key, $offset, $group);
 }
 
 /**
- * Remove the item from the cache.
+ * @param string|array $key
+ * @param string       $group
  *
- * Remove an item from memcached with identified by $key after $time seconds. The
- * $time parameter allows an object to be queued for deletion without immediately
- * deleting. Between the time that it is queued and the time it's deleted, add,
- * replace, and get will fail, but set will succeed.
- *
- *
- * @see http://www.php.net/manual/en/memcached.delete.php
- *
- * @param string $key   the key under which to store the value
- * @param string $group the group value appended to the $key
- * @param int    $time  the amount of time the server will wait to delete the item in seconds
- *
- * @return bool returns TRUE on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_delete($key, $group = '', $time = 0)
+function wp_cache_delete($key, string $group = 'default')
 {
-    return wp_object_cache()->delete($key, $group, $time);
+    return wp_object_cache()->delete($key, $group);
 }
 
 /**
- * Invalidate all items in the cache.
+ * @param int $delay
  *
- *
- * @see http://www.php.net/manual/en/memcached.flush.php
- *
- * @param int $delay number of seconds to wait before invalidating the items
- *
- * @return bool returns TRUE on success or FALSE on failure
+ * @return bool
  */
 function wp_cache_flush($delay = 0)
 {
@@ -90,87 +58,52 @@ function wp_cache_flush($delay = 0)
 }
 
 /**
- * Retrieve object from cache.
+ * @param string|array $key
+ * @param string       $group
+ * @param bool         $force
+ * @param bool|null    $found
  *
- * Gets an object from cache based on $key and $group. In order to fully support the $cache_cb and $cas_token
- * parameters, the runtime cache is ignored by this function if either of those values are set. If either of
- * those values are set, the request is made directly to the memcached server for proper handling of the
- * callback and/or token.
- *
- * Note that the $deprecated and $found args are only here for compatibility with the native wp_cache_get function.
- *
- *
- * @see http://www.php.net/manual/en/memcached.get.php
- *
- * @param string    $key   the key under which to store the value
- * @param string    $group the group value appended to the $key
- * @param bool      $force whether or not to force a cache invalidation
- * @param bool|null $found variable passed by reference to determine if the value was found or not
- *
- * @return bool|mixed cached object value
+ * @return mixed
  */
-function wp_cache_get($key, $group = 'default', $force = false, &$found = null)
+function wp_cache_get($key, string $group = 'default', $force = false, &$found = null)
 {
     return wp_object_cache()->get($key, $group, $force, $found);
 }
 
 /**
- * Increment a numeric item's value.
+ * @param string|array $key
+ * @param int          $offset
+ * @param string       $group
  *
- * This is the same as wp_cache_increment, but kept for back compatibility. The original
- * WordPress caching backends use wp_cache_incr. I want both to work.
- *
- *
- * @see http://www.php.net/manual/en/memcached.increment.php
- *
- * @param string $key    the key under which to store the value
- * @param int    $offset the amount by which to increment the item's value
- * @param string $group  the group value appended to the $key
- *
- * @return int|bool returns item's new value on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_incr($key, $offset = 1, $group = '')
+function wp_cache_incr($key, $offset = 1, string $group = 'default')
 {
     return wp_object_cache()->increment($key, $offset, $group);
 }
 
 /**
- * Replaces a value in cache.
+ * @param string|array           $key
+ * @param mixed|null             $value
+ * @param string                 $group
+ * @param int|\DateInterval|null $expiration
  *
- * This method is similar to "add"; however, is does not successfully set a value if
- * the object's key is not already set in cache.
- *
- *
- * @see http://www.php.net/manual/en/memcached.replace.php
- *
- * @param string $key        the key under which to store the value
- * @param mixed  $value      the value to store
- * @param string $group      the group value appended to the $key
- * @param int    $expiration the expiration time, defaults to 0
- *
- * @return bool returns TRUE on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_replace($key, $value, $group = '', $expiration = 0)
+function wp_cache_replace($key, $value = null, string $group = 'default', $expiration = 0)
 {
     return wp_object_cache()->replace($key, $value, $group, $expiration);
 }
 
 /**
- * Sets a value in cache.
+ * @param string|array           $key
+ * @param mixed|null             $value
+ * @param string                 $group
+ * @param int|\DateInterval|null $expiration
  *
- * The value is set whether or not this key already exists in memcached.
- *
- *
- * @see http://www.php.net/manual/en/memcached.set.php
- *
- * @param string $key        the key under which to store the value
- * @param mixed  $value      the value to store
- * @param string $group      the group value appended to the $key
- * @param int    $expiration the expiration time, defaults to 0
- *
- * @return bool returns TRUE on success or FALSE on failure
+ * @return bool
  */
-function wp_cache_set($key, $value, $group = '', $expiration = 0)
+function wp_cache_set($key, $value = null, string $group = 'default', $expiration = 0)
 {
     return wp_object_cache()->set($key, $value, $group, $expiration);
 }
@@ -206,6 +139,37 @@ function wp_cache_add_global_groups($groups)
 function wp_cache_add_non_persistent_groups($groups)
 {
     wp_object_cache()->setIgnoredGroups($groups);
+}
+
+/**
+ * @param string $key
+ * @param string $group
+ *
+ * @return bool
+ */
+function wp_cache_has(string $key, string $group = 'default'){
+   return wp_object_cache()->has($key,$group);
+}
+
+
+/**
+ * @param array  $keys
+ * @param string $group
+ *
+ * @return array
+ */
+function wp_cache_sanitize_keys(array $keys, string $group = 'default'){
+   return wp_object_cache()->sanitizeKeys($keys,$group);
+}
+
+/**
+ * @param string $key
+ * @param string $group
+ *
+ * @return string
+ */
+function wp_cache_sanitize_key(string $key, string $group = 'default'){
+    return wp_object_cache()->sanitizeKey($key,$group);
 }
 
 /**
