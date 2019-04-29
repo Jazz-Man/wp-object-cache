@@ -120,37 +120,28 @@ class Driver
      */
     private function driverSet()
     {
-        $cache_servers = $this->getCacheServers();
-        $cache_host = $this->getCacheHost();
-        $cache_port = $this->getCachePort();
-        $cache_timeout = $this->getCacheTimeout();
-        $cache_user = $this->getCacheUser();
-        $cache_pass = $this->getCachePass();
-        $cache_db = $this->getCacheDb();
-        $cache_prefix = $this->getCachePrefix();
-
         if (self::hasRedis()) {
             $this->driver = 'Redis';
 
             $this->driver_config = new RedisConfig([
-                'host' => $cache_host,
-                'port' => $cache_port ?: 6379,
+                'host' => $this->cache_host,
+                'port' => $this->cache_port ?: 6379,
             ]);
 
-            if (!empty($cache_prefix) && \is_string($cache_prefix)) {
-                $this->driver_config->setOptPrefix($cache_prefix);
+            if (!empty($this->cache_prefix) && \is_string($this->cache_prefix)) {
+                $this->driver_config->setOptPrefix($this->cache_prefix);
             }
 
-            if (!empty($cache_timeout) && \is_int($cache_timeout)) {
-                $this->driver_config->setTimeout($cache_timeout);
+            if (!empty($this->cache_timeout) && \is_int($this->cache_timeout)) {
+                $this->driver_config->setTimeout($this->cache_timeout);
             }
 
-            if (!empty($cache_pass) && \is_string($cache_pass)) {
-                $this->driver_config->setPassword($cache_pass);
+            if (!empty($this->cache_pass) && \is_string($this->cache_pass)) {
+                $this->driver_config->setPassword($this->cache_pass);
             }
 
-            if (!empty($cache_db) && \is_int($cache_db)) {
-                $this->driver_config->setDatabase($cache_db);
+            if (!empty($this->cache_db) && \is_int($this->cache_db)) {
+                $this->driver_config->setDatabase($this->cache_db);
             }
 
             return;
@@ -161,21 +152,21 @@ class Driver
 
 
             $this->driver_config = new MemcachedConfig([
-                'host' => $cache_host,
-                'port' => $cache_port ?: 11211,
+                'host' => $this->cache_host,
+                'port' => $this->cache_port ?: 11211,
             ]);
 
             $this->driver_config->setCompressData(true);
 
-            if (!empty($cache_user) && \is_string($cache_user)) {
-                $this->driver_config->setSaslUser($cache_user);
+            if (!empty($this->cache_user) && \is_string($this->cache_user)) {
+                $this->driver_config->setSaslUser($this->cache_user);
             }
-            if (!empty($cache_pass) && \is_string($cache_pass)) {
-                $this->driver_config->setSaslPassword($cache_pass);
+            if (!empty($this->cache_pass) && \is_string($this->cache_pass)) {
+                $this->driver_config->setSaslPassword($this->cache_pass);
             }
 
-            if (!empty($cache_servers) && \is_array($cache_servers)) {
-                $this->driver_config->setServers($cache_servers);
+            if (!empty($this->cache_servers) && \is_array($this->cache_servers)) {
+                $this->driver_config->setServers($this->cache_servers);
             }
 
             return;
@@ -188,70 +179,6 @@ class Driver
 
             return;
         }
-    }
-
-    /**
-     * @return array|bool
-     */
-    public function getCacheServers()
-    {
-        return $this->cache_servers;
-    }
-
-    /**
-     * @return string
-     */
-    public function getCacheHost()
-    {
-        return $this->cache_host;
-    }
-
-    /**
-     * @return bool|int
-     */
-    public function getCachePort()
-    {
-        return $this->cache_port;
-    }
-
-    /**
-     * @return bool|int
-     */
-    public function getCacheTimeout()
-    {
-        return $this->cache_timeout;
-    }
-
-    /**
-     * @return bool|string
-     */
-    public function getCacheUser()
-    {
-        return $this->cache_user;
-    }
-
-    /**
-     * @return bool|string
-     */
-    public function getCachePass()
-    {
-        return $this->cache_pass;
-    }
-
-    /**
-     * @return bool|int
-     */
-    public function getCacheDb()
-    {
-        return $this->cache_db;
-    }
-
-    /**
-     * @return bool|string
-     */
-    public function getCachePrefix()
-    {
-        return $this->cache_prefix;
     }
 
     /**
