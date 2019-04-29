@@ -57,6 +57,16 @@ class DriverAdapter
     private $memstatic_instance;
 
     /**
+     * @var int
+     */
+    public $cache_hits = 0;
+
+    /**
+     * @var int
+     */
+    public $cache_misses = 0;
+
+    /**
      * DriverAdapter constructor.
      *
      * @param null $config
@@ -112,7 +122,6 @@ class DriverAdapter
             'query',
             'terms',
             'term_meta',
-            'themes',
             'bookmark',
         ];
 
@@ -187,33 +196,42 @@ class DriverAdapter
     {
         $result = false;
 
-        $driver = $this->getDriver($group);
-
         try {
             if (\is_array($key)) {
                 $keys = $this->sanitizeKeys($key, $group);
 
+                $Items = $this->cache_instance->getItems($keys);
+
                 $result = array_map(static function (ExtendedCacheItemInterface $item) {
                     if ($this->isValidCacheItem($item)) {
+                        ++$this->cache_hits;
                         return $this->returnCacheItem($item);
                     }
 
+                    ++$this->cache_misses;
+
                     return false;
-                }, $driver->getItems($keys));
+                }, $Items);
             } else {
                 $key = $this->sanitizeKey($key, $group);
 
-                $cacheItem = $driver->getItem($key);
+                $cacheItem = $this->cache_instance->getItem($key);
                 if ($this->isValidCacheItem($cacheItem)) {
+                    ++$this->cache_hits;
                     $result = $this->returnCacheItem($cacheItem);
                 }
             }
 
-            $found = true;
         } catch (\Exception $e) {
-            $found = false;
             error_log($e);
         }
+
+        ++$this->cache_misses;
+
+//        if ($result === false){
+////            dump(compact('key','group'));
+//            dump($this->ignored_groups);
+//        }
 
         return $result;
     }
