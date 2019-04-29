@@ -5,9 +5,11 @@ namespace JazzMan\WPObjectCache;
 use JazzMan\Traits\SingletonTrait;
 use Phpfastcache\CacheManager;
 use Phpfastcache\Config\ConfigurationOption;
-use Phpfastcache\Drivers\Memcached\Config as MC;
+use Phpfastcache\Drivers\Apcu\Config as ApcuConfig;
+use Phpfastcache\Drivers\Memcached\Config as MemcachedConfig;
+use Phpfastcache\Drivers\Memstatic\Config as MemstaticConfig;
 use Phpfastcache\Drivers\Memstatic\Driver as MemstaticDriver;
-use Phpfastcache\Drivers\Redis\Config as RC;
+use Phpfastcache\Drivers\Redis\Config as RedisConfig;
 
 /**
  * Class ObjectCacheDriver.
@@ -56,14 +58,7 @@ class Driver
      * @var ConfigurationOption|null
      */
     private $driver_config;
-    /**
-     * @var array
-     */
-    private $driver_global_config = [
-        'itemDetailedDate' => true,
-        'preventCacheSlams' => true,
-        'autoTmpFallback' => true,
-    ];
+
     /**
      * @var \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
@@ -73,20 +68,28 @@ class Driver
      */
     private $memstatic;
 
-    private function __construct()
+    public function __construct()
     {
         $this->setCacheConfig();
 
         try {
             $this->driverSet();
 
-            CacheManager::setDefaultConfig(new ConfigurationOption($this->driver_global_config));
+            $this->driver_config->setItemDetailedDate(true);
+            $this->driver_config->setPreventCacheSlams(true);
+            $this->driver_config->setAutoTmpFallback(true);
+
 
             $this->cache_instance = CacheManager::getInstance($this->driver, $this->driver_config ?: null);
 
-            $this->memstatic = CacheManager::getInstance('memstatic');
+            $this->memstatic = CacheManager::getInstance('memstatic', new MemstaticConfig([
+                'itemDetailedDate' => true,
+                'preventCacheSlams' => true,
+                'autoTmpFallback' => true,
+            ]));
+
         } catch (\Exception $e) {
-            dump($e->getMessage());
+            error_log($e);
         }
     }
 
@@ -129,7 +132,7 @@ class Driver
         if (self::hasRedis()) {
             $this->driver = 'Redis';
 
-            $this->driver_config = new RC([
+            $this->driver_config = new RedisConfig([
                 'host' => $cache_host,
                 'port' => $cache_port ?: 6379,
             ]);
@@ -156,12 +159,13 @@ class Driver
         if (self::hasMemcached()) {
             $this->driver = 'Memcached';
 
-            $this->driver_global_config['compressData'] = true;
 
-            $this->driver_config = new MC([
+            $this->driver_config = new MemcachedConfig([
                 'host' => $cache_host,
                 'port' => $cache_port ?: 11211,
             ]);
+
+            $this->driver_config->setCompressData(true);
 
             if (!empty($cache_user) && \is_string($cache_user)) {
                 $this->driver_config->setSaslUser($cache_user);
@@ -179,6 +183,8 @@ class Driver
 
         if (self::hasApcu()) {
             $this->driver = 'Apcu';
+
+            $this->driver_config = new ApcuConfig();
 
             return;
         }
