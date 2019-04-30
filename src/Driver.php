@@ -14,6 +14,7 @@ use Phpfastcache\Drivers\Redis\Config as RedisConfig;
  */
 class Driver
 {
+
     use SingletonTrait;
 
     /**
@@ -69,12 +70,14 @@ class Driver
         try {
             $this->driverSet();
 
-            $this->driver_config->setItemDetailedDate(true);
-            $this->driver_config->setPreventCacheSlams(true);
-            $this->driver_config->setAutoTmpFallback(true);
+            if (null !== $this->driver_config) {
+                $this->driver_config->setItemDetailedDate(true);
+                $this->driver_config->setPreventCacheSlams(true);
+                $this->driver_config->setAutoTmpFallback(true);
+            }
 
 
-            $this->cache_instance = CacheManager::getInstance($this->driver, $this->driver_config ?: null);
+            $this->cache_instance = CacheManager::getInstance($this->driver, $this->driver_config);
 
         } catch (\Exception $e) {
             error_log($e);
@@ -108,65 +111,68 @@ class Driver
      */
     private function driverSet()
     {
-        if (self::hasRedis()) {
-            $this->driver = 'Redis';
+        switch (true) {
+            case self::hasRedis():
+                $this->driver = 'Redis';
 
-            $this->driver_config = new RedisConfig([
-                'host' => $this->cache_host,
-                'port' => $this->cache_port ?: 6379,
-            ]);
+                $this->driver_config = new RedisConfig([
+                    'host' => $this->cache_host,
+                    'port' => $this->cache_port ?: 6379,
+                ]);
 
-            if (!empty($this->cache_prefix) && \is_string($this->cache_prefix)) {
-                $this->driver_config->setOptPrefix($this->cache_prefix);
-            }
+                if ( ! empty($this->cache_prefix) && \is_string($this->cache_prefix)) {
+                    $this->driver_config->setOptPrefix($this->cache_prefix);
+                }
 
-            if (!empty($this->cache_timeout) && \is_int($this->cache_timeout)) {
-                $this->driver_config->setTimeout($this->cache_timeout);
-            }
+                if ( ! empty($this->cache_timeout) && \is_int($this->cache_timeout)) {
+                    $this->driver_config->setTimeout($this->cache_timeout);
+                }
 
-            if (!empty($this->cache_pass) && \is_string($this->cache_pass)) {
-                $this->driver_config->setPassword($this->cache_pass);
-            }
+                if ( ! empty($this->cache_pass) && \is_string($this->cache_pass)) {
+                    $this->driver_config->setPassword($this->cache_pass);
+                }
 
-            if (!empty($this->cache_db) && \is_int($this->cache_db)) {
-                $this->driver_config->setDatabase($this->cache_db);
-            }
+                if ( ! empty($this->cache_db) && \is_int($this->cache_db)) {
+                    $this->driver_config->setDatabase($this->cache_db);
+                }
 
-            return;
+                break;
+
+            case self::hasMemcached():
+                $this->driver = 'Memcached';
+
+
+                $this->driver_config = new MemcachedConfig([
+                    'host' => $this->cache_host,
+                    'port' => $this->cache_port ?: 11211,
+                ]);
+
+                $this->driver_config->setCompressData(true);
+
+                if ( ! empty($this->cache_user) && \is_string($this->cache_user)) {
+                    $this->driver_config->setSaslUser($this->cache_user);
+                }
+                if ( ! empty($this->cache_pass) && \is_string($this->cache_pass)) {
+                    $this->driver_config->setSaslPassword($this->cache_pass);
+                }
+
+                if ( ! empty($this->cache_servers) && \is_array($this->cache_servers)) {
+                    $this->driver_config->setServers($this->cache_servers);
+                }
+                break;
+
+            case self::hasApcu():
+                $this->driver = 'Apcu';
+
+                $this->driver_config = new ApcuConfig();
+                break;
+            default:
+                $this->driver        = 'Auto';
+                $this->driver_config = null;
+
+
         }
 
-        if (self::hasMemcached()) {
-            $this->driver = 'Memcached';
-
-
-            $this->driver_config = new MemcachedConfig([
-                'host' => $this->cache_host,
-                'port' => $this->cache_port ?: 11211,
-            ]);
-
-            $this->driver_config->setCompressData(true);
-
-            if (!empty($this->cache_user) && \is_string($this->cache_user)) {
-                $this->driver_config->setSaslUser($this->cache_user);
-            }
-            if (!empty($this->cache_pass) && \is_string($this->cache_pass)) {
-                $this->driver_config->setSaslPassword($this->cache_pass);
-            }
-
-            if (!empty($this->cache_servers) && \is_array($this->cache_servers)) {
-                $this->driver_config->setServers($this->cache_servers);
-            }
-
-            return;
-        }
-
-        if (self::hasApcu()) {
-            $this->driver = 'Apcu';
-
-            $this->driver_config = new ApcuConfig();
-
-            return;
-        }
     }
 
     /**
@@ -192,6 +198,7 @@ class Driver
     {
         return \extension_loaded('apcu') && ini_get('apc.enabled');
     }
+
     /**
      * @return \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
