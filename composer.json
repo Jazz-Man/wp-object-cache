@@ -14,12 +14,12 @@
     "sort-packages": true,
     "classmap-authoritative": true,
     "preferred-install": "dist",
-    "optimize-autoloader": true
+    "optimize-autoloader": true,
+    "apcu-autoloader": true
   },
   "require": {
     "php": ">=7.0",
     "composer/installers": "^1",
-    "jazzman/parameter-bag": "^1.2",
     "jazzman/singleton-trait": "^1.1",
     "phpfastcache/phpfastcache": "^7.0"
   },
@@ -41,6 +41,7 @@
     "phpfastcache/riak-client": "~1.4.4"
   },
   "require-dev": {
+    "dg/composer-cleaner": "^2.1",
     "roave/security-advisories": "dev-master"
   },
   "autoload": {
