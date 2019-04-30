@@ -161,8 +161,8 @@ class WPObjectCache
     {
         // request filesystem credentials?
         if (!empty($_GET) && !empty($_GET['action'])) {
-            $action = (string) $_GET['action'];
-            $nonce = (string) $_GET['_wpnonce'];
+            $action = filter_input(INPUT_GET, 'action');
+            $nonce = filter_input(INPUT_GET, '_wpnonce');
 
             foreach ($this->actions as $name) {
                 // verify nonce
