@@ -1,84 +1,80 @@
-<?php if ( ! defined('ABSPATH')) {
-    exit;
-}
+<?php if (defined('ABSPATH')): ?>
 
-?>
+    <div class="wrap">
 
-<div class="wrap">
+        <h1><?php esc_html_e('WP Object Cache', $this->page_slug); ?></h1>
 
-    <h1><?php esc_html_e('WP Object Cache', $this->page_slug); ?></h1>
+        <div class="section-overview">
 
-    <div class="section-overview">
+            <?php if (function_exists('wp_object_cache_get_stats')): ?>
 
-        <?php if (function_exists('wp_object_cache_get_stats')): ?>
+                <h2 class="title"><?php esc_html_e('Overview', $this->page_slug); ?></h2>
+                <?php
 
-            <h2 class="title"><?php esc_html_e('Overview', $this->page_slug); ?></h2>
-            <?php
+                $object_cache_data = wp_object_cache_get_stats();
 
-            $object_cache_data = wp_object_cache_get_stats();
+                $data = $object_cache_data->getData();
 
-            $data = $object_cache_data->getData();
+                $rawData = $object_cache_data->getRawData();
 
-            $rawData = $object_cache_data->getRawData();
+                ?>
 
-            ?>
+                <table class="form-table">
 
-            <table class="form-table">
-
-                <tr>
-                    <th><?php esc_html_e('Info:', $this->page_slug); ?></th>
-                    <td><code><?php echo $object_cache_data->getInfo(); ?></code></td>
-                </tr>
-                <tr>
-                    <th><?php esc_html_e('Size:', $this->page_slug); ?></th>
-                    <td><code><?php echo $object_cache_data->getSize(); ?></code></td>
-                </tr>
-
-                <?php if ( ! empty($data)): ?>
                     <tr>
-                        <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
-                        <td><code><?php var_export($data) ?></code></td>
+                        <th><?php esc_html_e('Info:', $this->page_slug); ?></th>
+                        <td><code><?php echo $object_cache_data->getInfo(); ?></code></td>
                     </tr>
-                <?php endif; ?>
-
-                <?php if ( ! empty($rawData)): ?>
                     <tr>
-                        <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
-                        <td><code><?php var_export($rawData) ?></code></td>
+                        <th><?php esc_html_e('Size:', $this->page_slug); ?></th>
+                        <td><code><?php echo $object_cache_data->getSize(); ?></code></td>
                     </tr>
-                <?php endif; ?>
 
-            </table>
-        <?php endif; ?>
+                    <?php if ( ! empty($data)): ?>
+                        <tr>
+                            <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
+                            <td><code><?php var_export($data); ?></code></td>
+                        </tr>
+                    <?php endif; ?>
 
-        <p class="submit">
+                    <?php if ( ! empty($rawData)): ?>
+                        <tr>
+                            <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
+                            <td><code><?php var_export($rawData); ?></code></td>
+                        </tr>
+                    <?php endif; ?>
 
-            <?php if ($this->getCacheStatus()) : ?>
-
-                <?php echo $this->getLink('flush-cache', 'Flush Cache', [
-                    'button',
-                    'button-primary',
-                    'button-large',
-                ]) ?>
+                </table>
             <?php endif; ?>
 
-            <?php if ( ! $this->objectCacheDropinExists()) : ?>
-                <?php echo $this->getLink('enable-cache', 'Enable Object Cache', [
-                    'button',
-                    'button-primary',
-                    'button-large',
-                ]) ?>
+            <p class="submit">
 
-            <?php elseif ($this->validateObjectCacheDropin()) : ?>
-                <?php echo $this->getLink('disable-cache', 'Disable Object Cache', [
-                    'button',
-                    'button-secondary',
-                    'button-large',
-                    'delete',
-                ]) ?>
-            <?php endif; ?>
+                <?php if ($this->getCacheStatus()) : ?>
 
-        </p>
+                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'flush-cache',
+                        $this->page)), 'flush-cache'); ?>"
+                       class="button button-primary button-large">
+                        <?php esc_html_e('Flush Cache', $this->page_slug); ?>
+                    </a>
+                <?php endif; ?>
 
+                <?php if ( ! $this->objectCacheDropinExists()) : ?>
+                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'enable-cache',
+                        $this->page)), 'enable-cache'); ?>"
+                       class="button button-primary button-large">
+                        <?php esc_html_e('Enable Object Cache', $this->page_slug); ?>
+                    </a>
+
+                <?php elseif ($this->validateObjectCacheDropin()) : ?>
+                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'disable-cache',
+                        $this->page)), 'disable-cache'); ?>"
+                       class="button button-secondary button-large delete">
+                        <?php esc_html_e('Disable Object Cache', $this->page_slug); ?>
+                    </a>
+                <?php endif; ?>
+
+            </p>
+
+        </div>
     </div>
-</div>
+<?php endif; ?>

@@ -241,23 +241,16 @@ class WPObjectCache
     /**
      * @param string $action
      * @param string $link_text
-     * @param array  $class
      *
      * @return string
      */
-    public function getLink($action = 'flush-cache', $link_text = 'Flush Cache', array $class = [])
+    public function getLink($action = 'flush-cache', $link_text = 'Flush Cache')
     {
         $action       = esc_attr($action);
         $link_text    = sanitize_text_field($link_text);
-        $link_classes = '';
-
-        if ( ! empty($class)) {
-            $link_classes = implode(' ', (array)$class);
-        }
 
         ob_start(); ?>
-        <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action); ?>"
-           class="<?php echo $link_classes; ?>">
+        <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action); ?>">
             <?php esc_html_e($link_text, $this->page_slug); ?>
         </a>
         <?php
