@@ -5,10 +5,6 @@ namespace JazzMan\WPObjectCache;
 use Phpfastcache\Drivers\Redis\Driver as RedisDriver;
 use Phpfastcache\Drivers\Memcached\Driver as MemcachedDriver;
 use Phpfastcache\Drivers\Apcu\Driver as ApcuDriver;
-use Phpfastcache\Drivers\Memstatic\Driver as MemstaticDriver;
-use Phpfastcache\Exceptions\PhpfastcacheCoreException;
-use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
-use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 use Psr\Cache\InvalidArgumentException;
 
 /**
@@ -16,7 +12,6 @@ use Psr\Cache\InvalidArgumentException;
  */
 class DriverAdapter
 {
-
     /**
      * @var bool
      */
@@ -77,10 +72,10 @@ class DriverAdapter
     {
         global $blog_id;
 
-        $this->blog_prefix = (int)$blog_id;
-        $this->multisite   = is_multisite();
+        $this->blog_prefix = (int) $blog_id;
+        $this->multisite = is_multisite();
 
-        $this->cache_instance     = app_object_cache()->getCacheInstance();
+        $this->cache_instance = app_object_cache()->getCacheInstance();
 
         $this->setCacheGroups();
         $this->setGlobalPrefix();
@@ -134,7 +129,7 @@ class DriverAdapter
 
     private function setGlobalPrefix()
     {
-        $has_cache_prefix = \defined('WP_CACHE_PREFIX') && ! empty(WP_CACHE_PREFIX);
+        $has_cache_prefix = \defined('WP_CACHE_PREFIX') && !empty(WP_CACHE_PREFIX);
 
         $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'], false);
 
@@ -166,7 +161,7 @@ class DriverAdapter
      */
     public function setIgnoredGroups($groups)
     {
-        $groups = (array)$groups;
+        $groups = (array) $groups;
 
         $ignored_groups = array_merge($this->ignored_groups, $groups);
         $ignored_groups = array_unique(array_filter($ignored_groups));
@@ -179,7 +174,7 @@ class DriverAdapter
      */
     public function setGlobalGroups($groups)
     {
-        $groups              = (array)$groups;
+        $groups = (array) $groups;
         $this->global_groups = array_merge($this->global_groups, $groups);
         $this->global_groups = array_unique(array_filter($this->global_groups));
     }
@@ -198,7 +193,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if (!empty($this->cache[$key]) && ! $force) {
+        if (!empty($this->cache[$key]) && !$force) {
             $found = true;
             ++$this->cache_hits;
 
@@ -215,7 +210,7 @@ class DriverAdapter
         try {
             $cacheItem = $this->cache_instance->getItem($key);
 
-            if ( ! $this->isValidCacheItem($cacheItem)) {
+            if (!$this->isValidCacheItem($cacheItem)) {
                 $found = false;
                 ++$this->cache_misses;
 
@@ -246,7 +241,7 @@ class DriverAdapter
      */
     private function isValidCacheItem($cacheItem)
     {
-        return ! $cacheItem->isExpired() && ! $cacheItem->isNull();
+        return !$cacheItem->isExpired() && !$cacheItem->isNull();
     }
 
     /**
@@ -371,7 +366,7 @@ class DriverAdapter
             return $result;
         }
 
-        if ( ! $this->isIgnoredGroup($group)) {
+        if (!$this->isIgnoredGroup($group)) {
             $key = $this->sanitizeKey($key, $group);
 
             try {
@@ -443,7 +438,7 @@ class DriverAdapter
 
         $result = $this->deleteFromInternalCache($key);
 
-        if ( ! $this->isIgnoredGroup($group)) {
+        if (!$this->isIgnoredGroup($group)) {
             try {
                 $result = $this->cache_instance->deleteItem($key);
             } catch (\Exception $e) {
@@ -459,7 +454,6 @@ class DriverAdapter
     /**
      * @param string|array $key
      * @param int          $offset
-     *
      * @param string       $group
      *
      * @return bool
@@ -488,7 +482,7 @@ class DriverAdapter
             $this->multisite_prefix,
         ];
 
-        if ( ! empty($this->global_prefix)) {
+        if (!empty($this->global_prefix)) {
             $cacheItemTags[] = $this->global_prefix;
         }
 
@@ -502,19 +496,16 @@ class DriverAdapter
             if ($result) {
                 $this->addToInternalCache($key, $cacheItem->get());
             }
-
         } catch (\Exception $e) {
             error_log($e);
         }
 
         return $result;
-
     }
 
     /**
      * @param string|array $key
      * @param int          $offset
-     *
      * @param string       $group
      *
      * @return bool
@@ -543,7 +534,7 @@ class DriverAdapter
             $this->multisite_prefix,
         ];
 
-        if ( ! empty($this->global_prefix)) {
+        if (!empty($this->global_prefix)) {
             $cacheItemTags[] = $this->global_prefix;
         }
 
@@ -565,7 +556,7 @@ class DriverAdapter
     }
 
     /**
-     * @param $delay
+     * @param int|null $delay
      *
      * @return bool
      */
@@ -573,9 +564,7 @@ class DriverAdapter
     {
         $result = false;
 
-        $delay = abs(intval($delay));
-
-        if ($delay) {
+        if (null !== $delay) {
             sleep($delay);
         }
 
@@ -583,8 +572,6 @@ class DriverAdapter
 
         try {
             $tag = $this->multisite ? $this->multisite_prefix : $this->pool_prefix;
-
-            dump($this->cache_instance->getStats());
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
@@ -601,7 +588,7 @@ class DriverAdapter
     {
         global $table_prefix;
 
-        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix) . '_';
+        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix).'_';
     }
 
     /**
@@ -609,6 +596,6 @@ class DriverAdapter
      */
     public function getStats()
     {
-       return $this->cache_instance->getStats();
+        return $this->cache_instance->getStats();
     }
 }
