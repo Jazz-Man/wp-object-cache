@@ -75,7 +75,7 @@ class DriverAdapter
         $this->blog_prefix = (int) $blog_id;
         $this->multisite = is_multisite();
 
-        $this->cache_instance = app_object_cache()->getCacheInstance();
+        $this->cache_instance = Driver::getInstance()->getCacheInstance();
 
         $this->setCacheGroups();
         $this->setGlobalPrefix();

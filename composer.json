@@ -47,9 +47,6 @@
   "autoload": {
     "psr-4": {
       "JazzMan\\WPObjectCache\\": "src"
-    },
-    "files": [
-      "helper.php"
-    ]
+    }
   }
 }
