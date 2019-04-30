@@ -2,11 +2,13 @@
 
 namespace JazzMan\WPObjectCache;
 
-use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
 use Phpfastcache\Drivers\Redis\Driver as RedisDriver;
 use Phpfastcache\Drivers\Memcached\Driver as MemcachedDriver;
 use Phpfastcache\Drivers\Apcu\Driver as ApcuDriver;
 use Phpfastcache\Drivers\Memstatic\Driver as MemstaticDriver;
+use Phpfastcache\Exceptions\PhpfastcacheCoreException;
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
+use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 use Psr\Cache\InvalidArgumentException;
 
 /**
@@ -14,6 +16,7 @@ use Psr\Cache\InvalidArgumentException;
  */
 class DriverAdapter
 {
+
     /**
      * @var bool
      */
@@ -65,6 +68,10 @@ class DriverAdapter
      * @var int
      */
     public $cache_misses = 0;
+    /**
+     * @var array
+     */
+    public $cache = [];
 
     /**
      * DriverAdapter constructor.
@@ -75,11 +82,10 @@ class DriverAdapter
     {
         global $blog_id;
 
-        $this->blog_prefix = (int) $blog_id;
-        $this->multisite = is_multisite();
+        $this->blog_prefix = (int)$blog_id;
+        $this->multisite   = is_multisite();
 
         $this->cache_instance     = app_object_cache()->getCacheInstance();
-        $this->memstatic_instance = app_object_cache()->getMemstatic();
 
         $this->setCacheGroups();
         $this->setGlobalPrefix();
@@ -133,14 +139,13 @@ class DriverAdapter
 
     private function setGlobalPrefix()
     {
-        $has_cache_prefix = \defined('WP_CACHE_PREFIX') && !empty(WP_CACHE_PREFIX);
+        $has_cache_prefix = \defined('WP_CACHE_PREFIX') && ! empty(WP_CACHE_PREFIX);
 
-        $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'],false);
+        $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'], false);
 
         $this->multisite_prefix = "{$this->pool_prefix}_blog_{$this->blog_prefix}";
 
         $this->global_prefix = $has_cache_prefix ? '' : $this->pool_prefix;
-
     }
 
     /**
@@ -166,7 +171,7 @@ class DriverAdapter
      */
     public function setIgnoredGroups($groups)
     {
-        $groups = (array) $groups;
+        $groups = (array)$groups;
 
         $ignored_groups = array_merge($this->ignored_groups, $groups);
         $ignored_groups = array_unique(array_filter($ignored_groups));
@@ -179,7 +184,7 @@ class DriverAdapter
      */
     public function setGlobalGroups($groups)
     {
-        $groups = (array) $groups;
+        $groups              = (array)$groups;
         $this->global_groups = array_merge($this->global_groups, $groups);
         $this->global_groups = array_unique(array_filter($this->global_groups));
     }
@@ -196,91 +201,47 @@ class DriverAdapter
     {
         $result = false;
 
+        $key = $this->sanitizeKey($key, $group);
+
+        if (!empty($this->cache[$key]) && ! $force) {
+            $found = true;
+            ++$this->cache_hits;
+
+            return $this->returnCacheItem($this->cache[$key]);
+        }
+
+        if ($this->isIgnoredGroup($group)) {
+            $found = false;
+            ++$this->cache_misses;
+
+            return false;
+        }
+
         try {
-            if (\is_array($key)) {
-                $keys = $this->sanitizeKeys($key, $group);
+            $cacheItem = $this->cache_instance->getItem($key);
 
-                $Items = $this->cache_instance->getItems($keys);
+            if ( ! $this->isValidCacheItem($cacheItem)) {
+                $found = false;
+                ++$this->cache_misses;
 
-                $result = array_map(static function (ExtendedCacheItemInterface $item) {
-                    if ($this->isValidCacheItem($item)) {
-                        ++$this->cache_hits;
-                        return $this->returnCacheItem($item);
-                    }
-
-                    ++$this->cache_misses;
-
-                    return false;
-                }, $Items);
-            } else {
-                $key = $this->sanitizeKey($key, $group);
-
-                $cacheItem = $this->cache_instance->getItem($key);
-                if ($this->isValidCacheItem($cacheItem)) {
-                    ++$this->cache_hits;
-                    $result = $this->returnCacheItem($cacheItem);
-                }
+                return false;
             }
 
+            $found = true;
+            ++$this->cache_hits;
+
+            $result = $cacheItem->get();
+
+            $this->addToInternalCache($key, $result);
+
+            return $this->returnCacheItem($result);
         } catch (\Exception $e) {
             error_log($e);
         }
 
         ++$this->cache_misses;
 
-//        if ($result === false){
-////            dump(compact('key','group'));
-//            dump($this->ignored_groups);
-//        }
-
         return $result;
-    }
-
-    /**
-     * @param string $group
-     *
-     * @return \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface|\Phpfastcache\Drivers\Memstatic\Driver
-     */
-    private function getDriver(string $group = 'default')
-    {
-        return $this->isIgnoredGroup($group) ? $this->memstatic_instance : $this->cache_instance;
-    }
-
-    /**
-     * @param string|array $keys
-     * @param string|array $group
-     *
-     * @return array
-     */
-    public function sanitizeKeys(array $keys, $group = 'default')
-    {
-        $derived_keys = [];
-
-        // If strings sent, convert to arrays for proper handling
-        if (!\is_array($group)) {
-            $group = (array) $group;
-        }
-
-        $keys_count = \count($keys);
-        $groups_count = \count($group);
-
-        if ($keys_count === $groups_count) {
-            for ($i = 0; $i < $keys_count; ++$i) {
-                $derived_keys[] = $this->sanitizeKey($keys[$i], $group[$i]);
-            }
-        } elseif ($keys_count > $groups_count) {
-            for ($i = 0; $i < $keys_count; ++$i) {
-                if (isset($group[$i])) {
-                    $derived_keys[] = $this->sanitizeKey($keys[$i], $group[$i]);
-                } elseif (1 === $groups_count) {
-                    $derived_keys[] = $this->sanitizeKey($keys[$i], $group[0]);
-                } else {
-                    $derived_keys[] = $this->sanitizeKey($keys[$i], 'default');
-                }
-            }
-        }
-
-        return $derived_keys;
     }
 
     /**
@@ -290,19 +251,52 @@ class DriverAdapter
      */
     private function isValidCacheItem($cacheItem)
     {
-        return !$cacheItem->isExpired() && !$cacheItem->isNull();
+        return ! $cacheItem->isExpired() && ! $cacheItem->isNull();
     }
 
     /**
-     * @param \Phpfastcache\Core\Item\ExtendedCacheItemInterface $cacheItem
+     * @param mixed $value
      *
      * @return mixed
      */
-    private function returnCacheItem($cacheItem)
+    private function returnCacheItem($value)
     {
-        $value = maybe_unserialize($cacheItem->get());
-
         return \is_object($value) ? clone $value : $value;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     */
+    private function addToInternalCache(string $key, $value)
+    {
+        $this->cache[$key] = $value;
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool|mixed
+     */
+    private function getFromInternalCache(string $key)
+    {
+        return $this->cache[$key] ?? false;
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    private function deleteFromInternalCache(string $key)
+    {
+        if (!empty($this->cache[$key])) {
+            unset($this->cache[$key]);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -311,7 +305,7 @@ class DriverAdapter
      *
      * @return string
      */
-    public function sanitizeKey(string $key, string $group = 'default')
+    private function sanitizeKey(string $key, string $group = 'default')
     {
         return $this->sanitizePrefix("{$group}_{$key}");
     }
@@ -349,26 +343,21 @@ class DriverAdapter
      *
      * @return bool
      */
-    public function has(string $key, string $group = 'default')
+    private function has(string $key, string $group = 'default')
     {
+        $result = false;
+
         $key = $this->sanitizeKey($key, $group);
 
         try {
-            $memstatic_item = $this->memstatic_instance->getItem($key);
-
-            if ($memstatic_item->isHit()) {
-                return true;
-            }
-
-            $cache_item = $this->cache_instance->getItem($key);
-            if ($cache_item->isHit() && !$cache_item->isExpired()) {
-                return true;
-            }
+            $result = $this->cache_instance->hasItem($key);
         } catch (\Exception $e) {
+            error_log($e);
+        } catch (InvalidArgumentException $e) {
             error_log($e);
         }
 
-        return false;
+        return $result;
     }
 
     /**
@@ -387,44 +376,31 @@ class DriverAdapter
             return $result;
         }
 
-        $is_array = \is_array($key);
+        if ( ! $this->isIgnoredGroup($group)) {
+            $key = $this->sanitizeKey($key, $group);
 
-        try {
-            if ($is_array) {
-                foreach ($key as $_key => $_data) {
-                    $cacheItem = $this->storeItem($_key, $_data, $group, $ttl, true);
+            try {
+                $cacheItemTags = [
+                    $this->sanitizePrefix($group),
+                    $this->multisite_prefix,
+                    $this->pool_prefix,
+                ];
 
-                    $this->memstatic_instance->saveDeferred($cacheItem);
-                    unset($cacheItem);
+                $cacheItem = $this->cache_instance->getItem($key);
+                $cacheItem->set($data);
+
+                $cacheItem->addTags($cacheItemTags);
+
+                $cacheItem->expiresAfter($ttl);
+
+                $result = $this->cache_instance->save($cacheItem);
+
+                if ($result) {
+                    $this->addToInternalCache($key, $cacheItem->get());
                 }
-
-                $this->memstatic_instance->commit();
-            } else {
-                $cacheItem = $this->storeItem($key, $data, $group, $ttl, true);
-
-                $this->memstatic_instance->save($cacheItem);
+            } catch (\Exception $e) {
+                error_log($e);
             }
-
-            if (!$this->isIgnoredGroup($group)) {
-                if ($is_array) {
-                    foreach ($key as $_key => $_data) {
-                        $cacheItem = $this->storeItem($_key, $_data, $group, $ttl);
-
-                        $this->cache_instance->saveDeferred($cacheItem);
-                        unset($cacheItem);
-                    }
-
-                    $result = $this->cache_instance->commit();
-                } else {
-                    $cacheItem = $this->storeItem($key, $data, $group, $ttl);
-
-                    $result = $this->cache_instance->save($cacheItem);
-                }
-            }
-        } catch (\Exception $e) {
-            error_log($e);
-
-            return false;
         }
 
         return $result;
@@ -436,41 +412,6 @@ class DriverAdapter
     private function isSuspendCacheAddition()
     {
         return \function_exists('wp_suspend_cache_addition') && wp_suspend_cache_addition();
-    }
-
-    /**
-     * @param string|array $key
-     * @param mixed|null   $data
-     * @param string       $group
-     * @param int          $ttl
-     * @param bool         $to_internal
-     *
-     * @return \Phpfastcache\Core\Item\ExtendedCacheItemInterface
-     *
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheCoreException
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheLogicException
-     */
-    private function storeItem($key, $data = null, string $group = 'default', int $ttl = DAY_IN_SECONDS, bool $to_internal = false) {
-        $cacheItemTags = [
-            $this->sanitizePrefix($group),
-            $this->multisite_prefix,
-            $this->pool_prefix
-        ];
-
-        $key = $this->sanitizeKey($key, $group);
-        $data = maybe_serialize($data);
-
-        $driver = $to_internal ? $this->memstatic_instance : $this->cache_instance;
-
-        $cacheItem = $driver->getItem($key);
-        $cacheItem->set($data);
-
-        $cacheItem->addTags($cacheItemTags);
-
-        $cacheItem->expiresAfter($ttl);
-
-        return $cacheItem;
     }
 
     /**
@@ -503,28 +444,18 @@ class DriverAdapter
             return $result;
         }
 
-        if (!$this->has($key)) {
-            return $result;
-        }
+        $key = $this->sanitizeKey($key, $group);
 
-        try {
-            if (\is_array($key)) {
-                $keys = $this->sanitizeKeys($key, $group);
+        $result = $this->deleteFromInternalCache($key);
 
-                $this->memstatic_instance->deleteItems($keys);
-
-                $result = $this->cache_instance->deleteItems($keys);
-            } else {
-                $key = $this->sanitizeKey($key, $group);
-
-                $this->memstatic_instance->deleteItem($key);
-
+        if ( ! $this->isIgnoredGroup($group)) {
+            try {
                 $result = $this->cache_instance->deleteItem($key);
+            } catch (\Exception $e) {
+                error_log($e);
+            } catch (InvalidArgumentException $e) {
+                error_log($e);
             }
-        } catch (\Exception $e) {
-            error_log($e);
-        } catch (InvalidArgumentException $e) {
-            error_log($e);
         }
 
         return $result;
@@ -532,25 +463,13 @@ class DriverAdapter
 
     /**
      * @param string|array $key
-     * @param string       $group
      * @param int          $offset
+     *
+     * @param string       $group
      *
      * @return bool
      */
-    public function decrement($key, string $group = 'default', $offset = 1)
-    {
-        return $this->decrementOrIncrement(true, $key, $group, $offset);
-    }
-
-    /**
-     * @param bool         $decrement
-     * @param string|array $key
-     * @param string       $group
-     * @param int          $offset
-     *
-     * @return bool|mixed
-     */
-    private function decrementOrIncrement(bool $decrement, $key, string $group = 'default', $offset = 1)
+    public function decrement($key, int $offset = 1, string $group = 'default')
     {
         $result = false;
 
@@ -558,104 +477,96 @@ class DriverAdapter
             return $result;
         }
 
-        $is_array = \is_array($key);
+        $key = $this->sanitizeKey($key, $group);
 
-        try {
-            if ($is_array) {
-                foreach ($key as $_key => $_offset) {
-                    $cacheItem = $this->storeDecrement($decrement, $_key, $group, $_offset, true);
-                    if ($this->isValidCacheItem($cacheItem)) {
-                        $this->memstatic_instance->saveDeferred($cacheItem);
-                    }
-                    unset($cacheItem);
-                }
+        if ($this->isIgnoredGroup($group)) {
+            $value = $this->getFromInternalCache($key);
+            $value -= $offset;
 
-                $this->memstatic_instance->commit();
-            } else {
-                $cacheItem = $this->storeDecrement($decrement, $key, $group, $offset, true);
+            $this->addToInternalCache($key, $value);
 
-                if ($this->isValidCacheItem($cacheItem)) {
-                    $this->memstatic_instance->save($cacheItem);
-                }
-            }
-
-            if (!$this->isIgnoredGroup($group)) {
-                if ($is_array) {
-                    foreach ($key as $_key => $_offset) {
-                        $cacheItem = $this->storeDecrement($decrement, $_key, $group, $_offset);
-                        if ($this->isValidCacheItem($cacheItem)) {
-                            $this->cache_instance->saveDeferred($cacheItem);
-                        }
-                        unset($cacheItem);
-                    }
-
-                    $result = $this->cache_instance->commit();
-                } else {
-                    $cacheItem = $this->storeDecrement($decrement, $key, $group, $offset);
-
-                    if ($this->isValidCacheItem($cacheItem)) {
-                        $result = $this->cache_instance->save($cacheItem);
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            error_log($e);
-
-            return false;
+            return $value;
         }
 
-        return $result;
-    }
-
-    /**
-     * @param bool   $decrement
-     * @param        $key
-     * @param string $group
-     * @param int    $offset
-     * @param bool   $to_internal
-     *
-     * @return \Phpfastcache\Core\Item\ExtendedCacheItemInterface
-     *
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheCoreException
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException
-     * @throws \Phpfastcache\Exceptions\PhpfastcacheLogicException
-     */
-    private function storeDecrement(bool $decrement, $key, string $group = 'default', $offset = 1, bool $to_internal = false) {
         $cacheItemTags = [
             $this->sanitizePrefix($group),
             $this->multisite_prefix,
         ];
 
-        if (!empty($this->global_prefix)) {
+        if ( ! empty($this->global_prefix)) {
             $cacheItemTags[] = $this->global_prefix;
         }
 
-        $driver = $to_internal ? $this->memstatic_instance : $this->cache_instance;
-
-        $key = $this->sanitizeKey($key, $group);
-
-        $cacheItem = $driver->getItem($key);
-        $cacheItem->addTags($cacheItemTags);
-
-        if ($decrement) {
+        try {
+            $cacheItem = $this->cache_instance->getItem($key);
             $cacheItem->decrement($offset);
-        } else {
-            $cacheItem->increment($offset);
+            $cacheItem->addTags($cacheItemTags);
+
+            $result = $this->cache_instance->save($cacheItem);
+
+            if ($result) {
+                $this->addToInternalCache($key, $cacheItem->get());
+            }
+
+        } catch (\Exception $e) {
+            error_log($e);
         }
 
-        return $cacheItem;
+        return $result;
+
     }
 
     /**
      * @param string|array $key
-     * @param string       $group
      * @param int          $offset
+     *
+     * @param string       $group
      *
      * @return bool
      */
-    public function increment($key, string $group = 'default', $offset = 1)
+    public function increment($key, int $offset = 1, string $group = 'default')
     {
-        return $this->decrementOrIncrement(false, $key, $group, $offset);
+        $result = false;
+
+        if ($this->isSuspendCacheAddition()) {
+            return $result;
+        }
+
+        $key = $this->sanitizeKey($key, $group);
+
+        if ($this->isIgnoredGroup($group)) {
+            $value = $this->getFromInternalCache($key);
+            $value += $offset;
+
+            $this->addToInternalCache($key, $value);
+
+            return $value;
+        }
+
+        $cacheItemTags = [
+            $this->sanitizePrefix($group),
+            $this->multisite_prefix,
+        ];
+
+        if ( ! empty($this->global_prefix)) {
+            $cacheItemTags[] = $this->global_prefix;
+        }
+
+        try {
+            $cacheItem = $this->cache_instance->getItem($key);
+            $cacheItem->increment($offset);
+            $cacheItem->addTags($cacheItemTags);
+
+            $result = $this->cache_instance->save($cacheItem);
+
+            if ($result) {
+                $this->addToInternalCache($key, $cacheItem->get());
+            }
+        } catch (\Exception $e) {
+            error_log($e);
+        }
+
+        return $result;
     }
 
     /**
@@ -667,15 +578,18 @@ class DriverAdapter
     {
         $result = false;
 
-        $this->memstatic_instance->clear();
+        $delay = abs(intval($delay));
+
+        if ($delay) {
+            sleep($delay);
+        }
+
+        $this->cache = [];
 
         try {
-
             $tag = $this->multisite ? $this->multisite_prefix : $this->pool_prefix;
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
-
-
         } catch (\Exception $e) {
             error_log($e);
         }
@@ -690,6 +604,6 @@ class DriverAdapter
     {
         global $table_prefix;
 
-        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix).'_';
+        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix) . '_';
     }
 }

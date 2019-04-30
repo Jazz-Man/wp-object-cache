@@ -7,8 +7,6 @@ use Phpfastcache\CacheManager;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Drivers\Apcu\Config as ApcuConfig;
 use Phpfastcache\Drivers\Memcached\Config as MemcachedConfig;
-use Phpfastcache\Drivers\Memstatic\Config as MemstaticConfig;
-use Phpfastcache\Drivers\Memstatic\Driver as MemstaticDriver;
 use Phpfastcache\Drivers\Redis\Config as RedisConfig;
 
 /**
@@ -63,10 +61,6 @@ class Driver
      * @var \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
     private $cache_instance;
-    /**
-     * @var MemstaticDriver
-     */
-    private $memstatic;
 
     public function __construct()
     {
@@ -81,12 +75,6 @@ class Driver
 
 
             $this->cache_instance = CacheManager::getInstance($this->driver, $this->driver_config ?: null);
-
-            $this->memstatic = CacheManager::getInstance('memstatic', new MemstaticConfig([
-                'itemDetailedDate' => true,
-                'preventCacheSlams' => true,
-                'autoTmpFallback' => true,
-            ]));
 
         } catch (\Exception $e) {
             error_log($e);
@@ -204,15 +192,6 @@ class Driver
     {
         return \extension_loaded('apcu') && ini_get('apc.enabled');
     }
-
-    /**
-     * @return \Phpfastcache\Drivers\Memstatic\Driver
-     */
-    public function getMemstatic()
-    {
-        return $this->memstatic;
-    }
-
     /**
      * @return \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface
      */
