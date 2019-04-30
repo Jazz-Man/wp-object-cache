@@ -1,5 +1,14 @@
 <?php
 
+/*
+Plugin Name: WP Object Cache Drop-In
+Plugin URI: https://github.com/Jazz-Man/wp-object-cache
+Description: Redis, Memcached or Apcu backend for the WP Object Cache
+Version: 0.1
+Author: Vasyl Sokolyk
+*/
+
+
 use JazzMan\WPObjectCache\DriverAdapter;
 
 /**
@@ -147,9 +156,17 @@ function wp_cache_init()
 {
     global $wp_object_cache;
 
-    if (! ($wp_object_cache instanceof DriverAdapter)) {
+    if ( ! ($wp_object_cache instanceof DriverAdapter)) {
         $wp_object_cache = new DriverAdapter;
     }
+}
+
+/**
+ * @return \Phpfastcache\Entities\DriverStatistic
+ */
+function wp_object_cache_get_stats()
+{
+    return wp_object_cache()->getStats();
 }
 
 

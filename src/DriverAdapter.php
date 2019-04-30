@@ -55,11 +55,6 @@ class DriverAdapter
     private $cache_instance;
 
     /**
-     * @var MemstaticDriver
-     */
-    private $memstatic_instance;
-
-    /**
      * @var int
      */
     public $cache_hits = 0;
@@ -589,6 +584,8 @@ class DriverAdapter
         try {
             $tag = $this->multisite ? $this->multisite_prefix : $this->pool_prefix;
 
+            dump($this->cache_instance->getStats());
+
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
             error_log($e);
@@ -605,5 +602,13 @@ class DriverAdapter
         global $table_prefix;
 
         $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix) . '_';
+    }
+
+    /**
+     * @return \Phpfastcache\Entities\DriverStatistic
+     */
+    public function getStats()
+    {
+       return $this->cache_instance->getStats();
     }
 }
