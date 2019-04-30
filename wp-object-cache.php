@@ -256,7 +256,7 @@ class WPObjectCache
         ob_start(); ?>
         <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action); ?>"
            class="<?php echo $link_classes; ?>">
-            <?php _e($link_text, $this->page_slug); ?>
+            <?php esc_html_e($link_text, $this->page_slug); ?>
         </a>
         <?php
         return ob_get_clean();

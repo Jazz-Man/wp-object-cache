@@ -6,13 +6,13 @@
 
 <div class="wrap">
 
-    <h1><?php _e('WP Object Cache', 'redis-cache'); ?></h1>
+    <h1><?php esc_html_e('WP Object Cache', $this->page_slug); ?></h1>
 
     <div class="section-overview">
 
         <?php if (function_exists('wp_object_cache_get_stats')): ?>
 
-            <h2 class="title"><?php _e('Overview', 'redis-cache'); ?></h2>
+            <h2 class="title"><?php esc_html_e('Overview', $this->page_slug); ?></h2>
             <?php
 
             $object_cache_data = wp_object_cache_get_stats();
@@ -26,24 +26,24 @@
             <table class="form-table">
 
                 <tr>
-                    <th><?php _e('Info:', 'redis-cache'); ?></th>
+                    <th><?php esc_html_e('Info:', $this->page_slug); ?></th>
                     <td><code><?php echo $object_cache_data->getInfo(); ?></code></td>
                 </tr>
                 <tr>
-                    <th><?php _e('Size:', 'redis-cache'); ?></th>
+                    <th><?php esc_html_e('Size:', $this->page_slug); ?></th>
                     <td><code><?php echo $object_cache_data->getSize(); ?></code></td>
                 </tr>
 
                 <?php if ( ! empty($data)): ?>
                     <tr>
-                        <th><?php _e('Data:', 'redis-cache'); ?></th>
+                        <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
                         <td><code><?php var_export($data) ?></code></td>
                     </tr>
                 <?php endif; ?>
 
                 <?php if ( ! empty($rawData)): ?>
                     <tr>
-                        <th><?php _e('Raw Data:', 'redis-cache'); ?></th>
+                        <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
                         <td><code><?php var_export($rawData) ?></code></td>
                     </tr>
                 <?php endif; ?>
