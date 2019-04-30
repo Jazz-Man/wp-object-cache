@@ -247,14 +247,11 @@ class WPObjectCache
     public function getLink($action = 'flush-cache', $link_text = 'Flush Cache')
     {
         $action       = esc_attr($action);
-        $link_text    = sanitize_text_field($link_text);
+        $link_text    = esc_html__(sanitize_text_field($link_text), $this->page_slug);
 
-        ob_start(); ?>
-        <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action); ?>">
-            <?php esc_html_e($link_text, $this->page_slug); ?>
-        </a>
-        <?php
-        return ob_get_clean();
+        $link_url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
+
+        return "<a href='{$link_url}'>{$link_text}</a>";
     }
 
     /**
