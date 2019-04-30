@@ -160,12 +160,13 @@ class WPObjectCache
     public function showAdminPage()
     {
         // request filesystem credentials?
-        if (isset($_GET['_wpnonce'], $_GET['action'])) {
-            $action = $_GET['action'];
+        if (!empty($_GET) && !empty($_GET['action'])) {
+            $action = (string) $_GET['action'];
+            $nonce = (string) $_GET['_wpnonce'];
 
             foreach ($this->actions as $name) {
                 // verify nonce
-                if ($action === $name && wp_verify_nonce($_GET['_wpnonce'], $action)) {
+                if ($action === $name && wp_verify_nonce($nonce, $action)) {
                     $url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
 
                     if (false === $this->initFs($url)) {
@@ -280,12 +281,13 @@ class WPObjectCache
 
         global $wp_filesystem;
 
-        if (isset($_GET['_wpnonce'], $_GET['action'])) {
-            $action = $_GET['action'];
+        if (!empty($_GET) && !empty($_GET['action'])) {
+            $action = (string) $_GET['action'];
+            $nonce = (string) $_GET['_wpnonce'];
 
             // verify nonce
             foreach ($this->actions as $name) {
-                if ($action === $name && !wp_verify_nonce($_GET['_wpnonce'], $action)) {
+                if ($action === $name && !wp_verify_nonce($nonce, $action)) {
                     return;
                 }
             }
@@ -319,7 +321,7 @@ class WPObjectCache
                 // redirect if status `$message` was set
                 if (isset($message)) {
                     wp_safe_redirect(network_admin_url(add_query_arg('message', $message, $this->page)));
-                    exit;
+                    exit(0);
                 }
             }
         }
@@ -333,8 +335,10 @@ class WPObjectCache
         }
 
         // show action success/failure messages
-        if (isset($_GET['message'])) {
-            switch ($_GET['message']) {
+        if (!empty($_GET) && !empty($_GET['message'])) {
+            $_message_code = (string) $_GET['message'];
+
+            switch ($_message_code) {
                 case 'cache-enabled':
                     $message = __('Object cache enabled.', $this->page_slug);
                     break;
@@ -383,7 +387,6 @@ class WPObjectCache
             }
         }
     }
-
 }
 
 new WPObjectCache();
