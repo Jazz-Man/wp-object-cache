@@ -13,11 +13,6 @@ use Psr\Cache\InvalidArgumentException;
 class DriverAdapter
 {
     /**
-     * @var bool
-     */
-    private $multisite;
-
-    /**
      * @var array
      */
     private $global_groups;
@@ -61,7 +56,7 @@ class DriverAdapter
     /**
      * @var array
      */
-    public $cache = [];
+    private $cache = [];
 
     /**
      * DriverAdapter constructor.
@@ -71,7 +66,6 @@ class DriverAdapter
         global $blog_id;
 
         $this->blog_prefix = (int) $blog_id;
-        $this->multisite = is_multisite();
 
         $this->cache_instance = Driver::getInstance()->getCacheInstance();
 
@@ -553,7 +547,7 @@ class DriverAdapter
         $this->cache = [];
 
         try {
-            $tag = $this->multisite ? $this->multisite_prefix : $this->pool_prefix;
+            $tag = is_multisite() ? $this->multisite_prefix : $this->pool_prefix;
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
@@ -570,7 +564,7 @@ class DriverAdapter
     {
         global $table_prefix;
 
-        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix).'_';
+        $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).'_';
     }
 
     /**
