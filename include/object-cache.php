@@ -60,7 +60,7 @@ function wp_cache_delete($key, string $group = 'default')
  */
 function wp_cache_flush()
 {
-    return wp_object_cache()->flush($delay);
+    return wp_object_cache()->flush();
 }
 
 /**
