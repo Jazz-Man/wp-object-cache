@@ -27,10 +27,6 @@ class DriverAdapter
     /**
      * @var string
      */
-    private $global_prefix = '';
-    /**
-     * @var string
-     */
     private $pool_prefix;
     /**
      * @var array
