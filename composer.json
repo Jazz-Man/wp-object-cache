@@ -1,6 +1,5 @@
 {
   "name": "jazzman/wp-object-cache",
-  "version": "1.0",
   "license": "GPL-3.0+",
   "type": "wordpress-plugin",
   "description": "Enable object caching for WordPress",
