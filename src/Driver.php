@@ -68,7 +68,7 @@ class Driver
         $this->setCacheConfig();
 
         try {
-            $this->driverSet();
+            $this->driverSetting();
 
             if (null !== $this->driver_config) {
                 $this->driver_config->setItemDetailedDate(true);
@@ -109,7 +109,7 @@ class Driver
      * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidConfigurationException
      * @throws \ReflectionException
      */
-    private function driverSet()
+    private function driverSetting()
     {
         switch (true) {
             case self::hasRedis():
