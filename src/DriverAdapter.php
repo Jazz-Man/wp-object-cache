@@ -48,6 +48,10 @@ class DriverAdapter
      * @var array
      */
     private $cache = [];
+    /**
+     * @var bool
+     */
+    private $has_cache_prefix;
 
     /**
      * DriverAdapter constructor.
@@ -60,8 +64,10 @@ class DriverAdapter
 
         $this->cache_instance = Driver::getInstance()->getCacheInstance();
 
+        $this->has_cache_prefix = \defined('WP_CACHE_PREFIX') && !empty(WP_CACHE_PREFIX);
+
         $this->setCacheGroups();
-        $this->setGlobalPrefix();
+        $this->setPoolPrefix($_SERVER['HTTP_HOST']);
     }
 
     private function setCacheGroups()
@@ -110,39 +116,28 @@ class DriverAdapter
         ];
     }
 
-    private function setGlobalPrefix()
-    {
-        $has_cache_prefix = \defined('WP_CACHE_PREFIX') && !empty(WP_CACHE_PREFIX);
-
-        $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'], false);
-
-        $this->global_prefix = $has_cache_prefix ? '' : $this->pool_prefix;
-    }
-
-    /**
-     * @param string $prefix
-     * @param bool   $add_global
-     *
-     * @return string
-     */
-    private function sanitizePrefix(string $prefix, bool $add_global = true)
-    {
-        if ($add_global && '' !== $this->global_prefix) {
-            $prefix = "{$this->global_prefix}_{$prefix}";
-        }
-
-        $prefix = strtolower($prefix);
-        $prefix = preg_replace('/[^a-z0-9_\-]/', '_', $prefix);
-
-        return $prefix;
-    }
-
     /**
      * @return string
      */
-    public function getMultisitePrefix()
+    private function getPoolPrefix()
     {
-        return "{$this->pool_prefix}_blog_{$this->blog_prefix}" ;
+        return $this->pool_prefix;
+    }
+
+    /**
+     * @param string $pool_prefix
+     */
+    private function setPoolPrefix(string $pool_prefix)
+    {
+        $this->pool_prefix = $this->sanitizePrefix($pool_prefix, false);
+    }
+
+    /**
+     * @return bool|string
+     */
+    private function getGlobalPrefix()
+    {
+        return $this->has_cache_prefix ? false : $this->getPoolPrefix();
     }
 
     /**
@@ -182,7 +177,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if (!empty($this->cache[$key]) && !$force) {
+        if (!$force && !empty($this->cache[$key])) {
             $found = true;
             ++$this->cache_hits;
 
@@ -264,6 +259,24 @@ class DriverAdapter
     }
 
     /**
+     * @param string $prefix
+     * @param bool   $add_global
+     *
+     * @return string
+     */
+    private function sanitizePrefix(string $prefix, bool $add_global = true)
+    {
+        if ($add_global && $global_prefix = $this->getGlobalPrefix()) {
+            $prefix = "{$global_prefix}_{$prefix}";
+        }
+
+        $prefix = strtolower($prefix);
+        $prefix = preg_replace('/[^a-z0-9_\-]/', '_', $prefix);
+
+        return $prefix;
+    }
+
+    /**
      * @param string|array           $key
      * @param mixed|null             $data
      * @param string                 $group
@@ -326,11 +339,11 @@ class DriverAdapter
                 $cacheItemTags = [
                     $this->sanitizePrefix($group),
                     $this->getMultisitePrefix(),
-                    $this->pool_prefix,
+                    $this->getPoolPrefix(),
                 ];
 
-                if (!empty($this->global_prefix) && $this->global_prefix !== $this->pool_prefix) {
-                    $cacheItemTags[] = $this->global_prefix;
+                if (($global_prefix = $this->getGlobalPrefix()) && $global_prefix !== $this->getPoolPrefix()) {
+                    $cacheItemTags[] = $global_prefix;
                 }
 
                 $cacheItem = $this->cache_instance->getItem($key);
@@ -359,6 +372,22 @@ class DriverAdapter
     private function isSuspendCacheAddition()
     {
         return \function_exists('wp_suspend_cache_addition') && wp_suspend_cache_addition();
+    }
+
+    /**
+     * @return bool
+     */
+    private function isMultisite()
+    {
+        return \function_exists('is_multisite') && is_multisite();
+    }
+
+    /**
+     * @return string
+     */
+    private function getMultisitePrefix()
+    {
+        return "{$this->getPoolPrefix()}_blog_{$this->blog_prefix}";
     }
 
     /**
@@ -453,11 +482,11 @@ class DriverAdapter
         $cacheItemTags = [
             $this->sanitizePrefix($group),
             $this->getMultisitePrefix(),
-            $this->pool_prefix,
+            $this->getPoolPrefix(),
         ];
 
-        if (!empty($this->global_prefix)) {
-            $cacheItemTags[] = $this->global_prefix;
+        if (($global_prefix = $this->getGlobalPrefix()) && $global_prefix !== $this->getPoolPrefix()) {
+            $cacheItemTags[] = $global_prefix;
         }
 
         try {
@@ -516,11 +545,11 @@ class DriverAdapter
         $cacheItemTags = [
             $this->sanitizePrefix($group),
             $this->getMultisitePrefix(),
-            $this->pool_prefix,
+            $this->getPoolPrefix(),
         ];
 
-        if (!empty($this->global_prefix)) {
-            $cacheItemTags[] = $this->global_prefix;
+        if (($global_prefix = $this->getGlobalPrefix()) && $global_prefix !== $this->getPoolPrefix()) {
+            $cacheItemTags[] = $global_prefix;
         }
 
         try {
@@ -550,7 +579,7 @@ class DriverAdapter
         $this->cache = [];
 
         try {
-            $tag = is_multisite() ? $this->getMultisitePrefix() : $this->pool_prefix;
+            $tag = $this->isMultisite() ? $this->getMultisitePrefix() : $this->getPoolPrefix();
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
@@ -567,7 +596,7 @@ class DriverAdapter
      */
     public function switchToBlog(int $blog_id)
     {
-        if (!\function_exists('is_multisite') || !is_multisite()) {
+        if (!$this->isMultisite()) {
             return false;
         }
 
