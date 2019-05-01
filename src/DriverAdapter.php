@@ -123,13 +123,7 @@ class DriverAdapter
     {
         $has_cache_prefix = \defined('WP_CACHE_PREFIX') && !empty(WP_CACHE_PREFIX);
 
-        if ($this->isCli()) {
-            $pool_prefix = filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_URL);
-        } else {
-            $pool_prefix = filter_input(INPUT_SERVER, 'HTTP_HOST', FILTER_SANITIZE_URL);
-        }
-
-        $this->pool_prefix = $this->sanitizePrefix($pool_prefix, false);
+        $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'], false);
 
         $this->multisite_prefix = "{$this->pool_prefix}_blog_{$this->blog_prefix}";
 
@@ -571,14 +565,6 @@ class DriverAdapter
         global $table_prefix;
 
         $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).'_';
-    }
-
-    /**
-     * @return bool
-     */
-    private function isCli()
-    {
-        return (\defined('WP_CLI') && WP_CLI) || (\PHP_SAPI === 'cli');
     }
 
     /**
