@@ -13,24 +13,25 @@ use Psr\Cache\InvalidArgumentException;
 class DriverAdapter
 {
     /**
+     * @var int
+     */
+    public $cache_hits = 0;
+    /**
+     * @var int
+     */
+    public $cache_misses = 0;
+    /**
      * @var array
      */
     private $global_groups;
-
     /**
      * @var string
      */
     private $global_prefix = '';
-
     /**
      * @var string
      */
     private $pool_prefix;
-
-    /**
-     * @var string
-     */
-    private $multisite_prefix;
     /**
      * @var array
      */
@@ -43,16 +44,6 @@ class DriverAdapter
      * @var RedisDriver|MemcachedDriver|ApcuDriver
      */
     private $cache_instance;
-
-    /**
-     * @var int
-     */
-    public $cache_hits = 0;
-
-    /**
-     * @var int
-     */
-    public $cache_misses = 0;
     /**
      * @var array
      */
@@ -125,8 +116,6 @@ class DriverAdapter
 
         $this->pool_prefix = $this->sanitizePrefix($_SERVER['HTTP_HOST'], false);
 
-        $this->multisite_prefix = "{$this->pool_prefix}_blog_{$this->blog_prefix}";
-
         $this->global_prefix = $has_cache_prefix ? '' : $this->pool_prefix;
     }
 
@@ -146,6 +135,14 @@ class DriverAdapter
         $prefix = preg_replace('/[^a-z0-9_\-]/', '_', $prefix);
 
         return $prefix;
+    }
+
+    /**
+     * @return string
+     */
+    public function getMultisitePrefix()
+    {
+        return "{$this->pool_prefix}_blog_{$this->blog_prefix}" ;
     }
 
     /**
@@ -227,13 +224,14 @@ class DriverAdapter
     }
 
     /**
-     * @param \Phpfastcache\Core\Item\ExtendedCacheItemInterface $cacheItem
+     * @param string $key
+     * @param string $group
      *
-     * @return bool
+     * @return string
      */
-    private function isValidCacheItem($cacheItem)
+    private function sanitizeKey(string $key, string $group = 'default')
     {
-        return !$cacheItem->isExpired() && !$cacheItem->isNull();
+        return $this->sanitizePrefix("blog_{$this->blog_prefix}_{$group}_{$key}");
     }
 
     /**
@@ -247,49 +245,22 @@ class DriverAdapter
     }
 
     /**
+     * @param \Phpfastcache\Core\Item\ExtendedCacheItemInterface $cacheItem
+     *
+     * @return bool
+     */
+    private function isValidCacheItem($cacheItem)
+    {
+        return !$cacheItem->isExpired() && !$cacheItem->isNull();
+    }
+
+    /**
      * @param string $key
      * @param mixed  $value
      */
     private function addToInternalCache(string $key, $value)
     {
         $this->cache[$key] = $value;
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool|mixed
-     */
-    private function getFromInternalCache(string $key)
-    {
-        return $this->cache[$key] ?? false;
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return bool
-     */
-    private function deleteFromInternalCache(string $key)
-    {
-        if (!empty($this->cache[$key])) {
-            unset($this->cache[$key]);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $key
-     * @param string $group
-     *
-     * @return string
-     */
-    private function sanitizeKey(string $key, string $group = 'default')
-    {
-        return $this->sanitizePrefix("{$group}_{$key}");
     }
 
     /**
@@ -354,9 +325,13 @@ class DriverAdapter
             try {
                 $cacheItemTags = [
                     $this->sanitizePrefix($group),
-                    $this->multisite_prefix,
+                    $this->getMultisitePrefix(),
                     $this->pool_prefix,
                 ];
+
+                if (!empty($this->global_prefix) && $this->global_prefix !== $this->pool_prefix) {
+                    $cacheItemTags[] = $this->global_prefix;
+                }
 
                 $cacheItem = $this->cache_instance->getItem($key);
                 $cacheItem->set($data);
@@ -434,6 +409,22 @@ class DriverAdapter
     }
 
     /**
+     * @param string $key
+     *
+     * @return bool
+     */
+    private function deleteFromInternalCache(string $key)
+    {
+        if (!empty($this->cache[$key])) {
+            unset($this->cache[$key]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * @param string|array $key
      * @param int          $offset
      * @param string       $group
@@ -461,7 +452,8 @@ class DriverAdapter
 
         $cacheItemTags = [
             $this->sanitizePrefix($group),
-            $this->multisite_prefix,
+            $this->getMultisitePrefix(),
+            $this->pool_prefix,
         ];
 
         if (!empty($this->global_prefix)) {
@@ -483,6 +475,16 @@ class DriverAdapter
         }
 
         return $result;
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return bool|mixed
+     */
+    private function getFromInternalCache(string $key)
+    {
+        return $this->cache[$key] ?? false;
     }
 
     /**
@@ -513,7 +515,8 @@ class DriverAdapter
 
         $cacheItemTags = [
             $this->sanitizePrefix($group),
-            $this->multisite_prefix,
+            $this->getMultisitePrefix(),
+            $this->pool_prefix,
         ];
 
         if (!empty($this->global_prefix)) {
@@ -547,7 +550,7 @@ class DriverAdapter
         $this->cache = [];
 
         try {
-            $tag = is_multisite() ? $this->multisite_prefix : $this->pool_prefix;
+            $tag = is_multisite() ? $this->getMultisitePrefix() : $this->pool_prefix;
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
@@ -559,12 +562,18 @@ class DriverAdapter
 
     /**
      * @param int $blog_id
+     *
+     * @return bool
      */
     public function switchToBlog(int $blog_id)
     {
-        global $table_prefix;
+        if (!\function_exists('is_multisite') || !is_multisite()) {
+            return false;
+        }
 
-        $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).'_';
+        $this->blog_prefix = $blog_id;
+
+        return true;
     }
 
     /**
