@@ -65,10 +65,8 @@ class DriverAdapter
 
     /**
      * DriverAdapter constructor.
-     *
-     * @param null $config
      */
-    public function __construct($config = null)
+    public function __construct()
     {
         global $blog_id;
 
