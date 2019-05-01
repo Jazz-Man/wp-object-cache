@@ -78,7 +78,6 @@ class WPObjectCache
 
         add_action($admin_menu, [$this, 'addAdminMenuPage']);
 
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles']);
         add_action("load-{$screen}", [$this, 'doAdminActions']);
         add_action("load-{$screen}", [$this, 'addAdminPageNotices']);
 
