@@ -56,11 +56,9 @@ function wp_cache_delete($key, string $group = 'default')
 }
 
 /**
- * @param int $delay
- *
  * @return bool
  */
-function wp_cache_flush($delay = 0)
+function wp_cache_flush()
 {
     return wp_object_cache()->flush($delay);
 }

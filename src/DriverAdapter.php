@@ -554,17 +554,11 @@ class DriverAdapter
     }
 
     /**
-     * @param int|null $delay
-     *
      * @return bool
      */
-    public function flush(int $delay = null)
+    public function flush()
     {
         $result = false;
-
-        if (null !== $delay) {
-            sleep($delay);
-        }
 
         $this->cache = [];
 
