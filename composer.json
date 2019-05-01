@@ -1,6 +1,5 @@
 {
   "name": "jazzman/wp-object-cache",
-  "version": "1.0",
   "license": "GPL-3.0+",
   "type": "wordpress-plugin",
   "description": "Enable object caching for WordPress",
@@ -22,23 +21,6 @@
     "composer/installers": "^1",
     "jazzman/singleton-trait": "^1.1",
     "phpfastcache/phpfastcache": "^7.0"
-  },
-  "suggest": {
-    "ext-apc": "*",
-    "ext-intl": "*",
-    "ext-memcached": "*",
-    "ext-memcache": "*",
-    "ext-redis": "*",
-    "ext-xcache": "*",
-    "ext-sqlite": "*",
-    "ext-wincache": "*",
-    "ext-leveldb": "*",
-    "ext-couchbase": "*",
-    "predis/predis": "~1.1.0",
-    "mongodb/mongodb": "^1.1",
-    "phpfastcache/phpssdb": "~1.0.0",
-    "phpfastcache/couchdb": "~1.0.0",
-    "phpfastcache/riak-client": "~1.4.4"
   },
   "require-dev": {
     "dg/composer-cleaner": "^2.1",
