@@ -3,7 +3,7 @@
 /*
 Plugin Name: WP Object Cache
 Description: Redis, Memcached or Apcu backend for the WP Object Cache
-Version: 0.1
+Version: v1.0
 Plugin URI: https://github.com/Jazz-Man/wp-object-cache
 Author: Vasyl Sokolyk
 
