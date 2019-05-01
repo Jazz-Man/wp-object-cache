@@ -13,11 +13,6 @@ use Psr\Cache\InvalidArgumentException;
 class DriverAdapter
 {
     /**
-     * @var bool
-     */
-    private $multisite;
-
-    /**
      * @var array
      */
     private $global_groups;
@@ -61,21 +56,18 @@ class DriverAdapter
     /**
      * @var array
      */
-    public $cache = [];
+    private $cache = [];
 
     /**
      * DriverAdapter constructor.
-     *
-     * @param null $config
      */
-    public function __construct($config = null)
+    public function __construct()
     {
         global $blog_id;
 
         $this->blog_prefix = (int) $blog_id;
-        $this->multisite = is_multisite();
 
-        $this->cache_instance = app_object_cache()->getCacheInstance();
+        $this->cache_instance = Driver::getInstance()->getCacheInstance();
 
         $this->setCacheGroups();
         $this->setGlobalPrefix();
@@ -200,7 +192,7 @@ class DriverAdapter
             return $this->returnCacheItem($this->cache[$key]);
         }
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $found = false;
             ++$this->cache_misses;
 
@@ -301,16 +293,6 @@ class DriverAdapter
     }
 
     /**
-     * @param string $group
-     *
-     * @return bool
-     */
-    private function isIgnoredGroup(string $group)
-    {
-        return \in_array($group, $this->ignored_groups);
-    }
-
-    /**
      * @param string|array           $key
      * @param mixed|null             $data
      * @param string                 $group
@@ -366,7 +348,7 @@ class DriverAdapter
             return $result;
         }
 
-        if (!$this->isIgnoredGroup($group)) {
+        if (!\in_array($group, $this->ignored_groups)) {
             $key = $this->sanitizeKey($key, $group);
 
             try {
@@ -438,7 +420,7 @@ class DriverAdapter
 
         $result = $this->deleteFromInternalCache($key);
 
-        if (!$this->isIgnoredGroup($group)) {
+        if (!\in_array($group, $this->ignored_groups)) {
             try {
                 $result = $this->cache_instance->deleteItem($key);
             } catch (\Exception $e) {
@@ -468,7 +450,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $value = $this->getFromInternalCache($key);
             $value -= $offset;
 
@@ -520,7 +502,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $value = $this->getFromInternalCache($key);
             $value += $offset;
 
@@ -556,22 +538,16 @@ class DriverAdapter
     }
 
     /**
-     * @param int|null $delay
-     *
      * @return bool
      */
-    public function flush(int $delay = null)
+    public function flush()
     {
         $result = false;
-
-        if (null !== $delay) {
-            sleep($delay);
-        }
 
         $this->cache = [];
 
         try {
-            $tag = $this->multisite ? $this->multisite_prefix : $this->pool_prefix;
+            $tag = is_multisite() ? $this->multisite_prefix : $this->pool_prefix;
 
             $result = $this->cache_instance->deleteItemsByTag($tag);
         } catch (\Exception $e) {
@@ -588,7 +564,7 @@ class DriverAdapter
     {
         global $table_prefix;
 
-        $this->blog_prefix = ($this->multisite ? $blog_id : $table_prefix).'_';
+        $this->blog_prefix = (is_multisite() ? $blog_id : $table_prefix).'_';
     }
 
     /**

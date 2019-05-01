@@ -14,6 +14,7 @@ Author: Vasyl Sokolyk
  */
 class WPObjectCache
 {
+
     /**
      * @var string
      */
@@ -58,12 +59,12 @@ class WPObjectCache
         register_activation_hook(__FILE__, 'wp_cache_flush');
         register_deactivation_hook(__FILE__, [$this, 'onDeactivation']);
 
-        load_plugin_textdomain($this->page_slug, false, plugin_basename($this->root_dir).'/languages');
+        load_plugin_textdomain($this->page_slug, false, plugin_basename($this->root_dir) . '/languages');
 
         $is_multisite = is_multisite();
 
-        $this->dropin_file = "{$this->root_dir}include/object-cache.php";
-        $this->wp_dropin_file = WP_CONTENT_DIR.'/object-cache.php';
+        $this->dropin_file    = "{$this->root_dir}include/object-cache.php";
+        $this->wp_dropin_file = WP_CONTENT_DIR . '/object-cache.php';
 
         $this->capability = $is_multisite ? 'manage_network_options' : 'manage_options';
 
@@ -97,7 +98,7 @@ class WPObjectCache
     public function showAdminNotices()
     {
         // only show admin notices to users with the right capability
-        if (!current_user_can($this->capability)) {
+        if ( ! current_user_can($this->capability)) {
             return;
         }
 
@@ -146,7 +147,7 @@ class WPObjectCache
         if ($this->getCacheStatus()) {
             $_actions[] = $this->getLink('flush-cache', 'Flush Cache');
         }
-        if (!$this->objectCacheDropinExists()) {
+        if ( ! $this->objectCacheDropinExists()) {
             $_actions[] = $this->getLink('enable-cache', 'Enable Cache');
         }
 
@@ -159,13 +160,14 @@ class WPObjectCache
 
     public function showAdminPage()
     {
-        // request filesystem credentials?
-        if (isset($_GET['_wpnonce'], $_GET['action'])) {
-            $action = $_GET['action'];
+        $action = filter_input(INPUT_GET, 'action');
+        $nonce  = filter_input(INPUT_GET, '_wpnonce');
 
+        // request filesystem credentials?
+        if ( ! empty($action) && ! empty($nonce)) {
             foreach ($this->actions as $name) {
                 // verify nonce
-                if ($action === $name && wp_verify_nonce($_GET['_wpnonce'], $action)) {
+                if ($action === $name && wp_verify_nonce($nonce, $action)) {
                     $url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
 
                     if (false === $this->initFs($url)) {
@@ -176,7 +178,7 @@ class WPObjectCache
         }
 
         // show admin page
-        require_once $this->root_dir.'/admin-page.php';
+        require_once $this->root_dir . '/admin-page.php';
     }
 
     /**
@@ -199,7 +201,7 @@ class WPObjectCache
             return false;
         }
 
-        if (!WP_Filesystem($credentials)) {
+        if ( ! WP_Filesystem($credentials)) {
             request_filesystem_credentials($url);
 
             if ($silent) {
@@ -225,7 +227,7 @@ class WPObjectCache
      */
     public function validateObjectCacheDropin()
     {
-        if (!$this->objectCacheDropinExists()) {
+        if ( ! $this->objectCacheDropinExists()) {
             return false;
         }
 
@@ -239,27 +241,17 @@ class WPObjectCache
     /**
      * @param string $action
      * @param string $link_text
-     * @param array  $class
      *
      * @return string
      */
-    public function getLink($action = 'flush-cache', $link_text = 'Flush Cache', array $class = [])
+    public function getLink($action = 'flush-cache', $link_text = 'Flush Cache')
     {
-        $action = esc_attr($action);
-        $link_text = sanitize_text_field($link_text);
-        $link_classes = '';
+        $action       = esc_attr($action);
+        $link_text    = esc_html__(sanitize_text_field($link_text), $this->page_slug);
 
-        if (!empty($class)) {
-            $link_classes = implode(' ', (array) $class);
-        }
+        $link_url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
 
-        ob_start(); ?>
-        <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action); ?>"
-           class="<?php echo $link_classes; ?>">
-            <?php _e($link_text, $this->page_slug); ?>
-        </a>
-        <?php
-        return ob_get_clean();
+        return "<a href='{$link_url}'>{$link_text}</a>";
     }
 
     /**
@@ -280,12 +272,13 @@ class WPObjectCache
 
         global $wp_filesystem;
 
-        if (isset($_GET['_wpnonce'], $_GET['action'])) {
-            $action = $_GET['action'];
+        $action = filter_input(INPUT_GET, 'action');
+        $nonce  = filter_input(INPUT_GET, '_wpnonce');
 
+        if ( ! empty($action) && ! empty($nonce)) {
             // verify nonce
             foreach ($this->actions as $name) {
-                if ($action === $name && !wp_verify_nonce($_GET['_wpnonce'], $action)) {
+                if ($action === $name && ! wp_verify_nonce($nonce, $action)) {
                     return;
                 }
             }
@@ -301,16 +294,16 @@ class WPObjectCache
                     switch ($action) {
                         case 'enable-cache':
 
-                            $result = $wp_filesystem->copy($this->dropin_file, $this->wp_dropin_file, true);
+                            $result  = $wp_filesystem->copy($this->dropin_file, $this->wp_dropin_file, true);
                             $message = $result ? 'cache-enabled' : 'enable-cache-failed';
                             break;
                         case 'disable-cache':
-                            $result = $wp_filesystem->delete($this->wp_dropin_file);
+                            $result  = $wp_filesystem->delete($this->wp_dropin_file);
                             $message = $result ? 'cache-disabled' : 'disable-cache-failed';
                             break;
 
                         case 'update-dropin':
-                            $result = $wp_filesystem->copy($this->dropin_file, $this->wp_dropin_file, true);
+                            $result  = $wp_filesystem->copy($this->dropin_file, $this->wp_dropin_file, true);
                             $message = $result ? 'dropin-updated' : 'update-dropin-failed';
                             break;
                     }
@@ -319,7 +312,7 @@ class WPObjectCache
                 // redirect if status `$message` was set
                 if (isset($message)) {
                     wp_safe_redirect(network_admin_url(add_query_arg('message', $message, $this->page)));
-                    exit;
+                    exit(0);
                 }
             }
         }
@@ -332,9 +325,12 @@ class WPObjectCache
             add_settings_error('', $this->page_slug, __('This plugin requires PHP 5.4 or greater.', $this->page_slug));
         }
 
+        $message_code = filter_input(INPUT_GET, 'message');
+
         // show action success/failure messages
-        if (isset($_GET['message'])) {
-            switch ($_GET['message']) {
+        if ( ! empty($message_code)) {
+
+            switch ($message_code) {
                 case 'cache-enabled':
                     $message = __('Object cache enabled.', $this->page_slug);
                     break;
@@ -383,7 +379,6 @@ class WPObjectCache
             }
         }
     }
-
 }
 
 new WPObjectCache();
