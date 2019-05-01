@@ -13,36 +13,28 @@
 
                 $object_cache_data = wp_object_cache_get_stats();
 
-                $data = $object_cache_data->getData();
-
-                $rawData = $object_cache_data->getRawData();
-
                 ?>
 
                 <table class="form-table">
 
                     <tr>
                         <th><?php esc_html_e('Info:', $this->page_slug); ?></th>
-                        <td><code><?php echo $object_cache_data->getInfo(); ?></code></td>
+                        <td><code><?php var_export($object_cache_data->getInfo()); ?></code></td>
                     </tr>
                     <tr>
                         <th><?php esc_html_e('Size:', $this->page_slug); ?></th>
-                        <td><code><?php echo $object_cache_data->getSize(); ?></code></td>
+                        <td><code><?php var_export($object_cache_data->getSize()); ?></code></td>
                     </tr>
 
-                    <?php if (!empty($data)): ?>
-                        <tr>
-                            <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
-                            <td><code><?php var_export($data); ?></code></td>
-                        </tr>
-                    <?php endif; ?>
+                    <tr>
+                        <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
+                        <td><code><?php var_export($object_cache_data->getData()); ?></code></td>
+                    </tr>
 
-                    <?php if (!empty($rawData)): ?>
-                        <tr>
-                            <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
-                            <td><code><?php var_export($rawData); ?></code></td>
-                        </tr>
-                    <?php endif; ?>
+                    <tr>
+                        <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
+                        <td><code><?php var_export($object_cache_data->getRawData()); ?></code></td>
+                    </tr>
 
                 </table>
             <?php endif; ?>
