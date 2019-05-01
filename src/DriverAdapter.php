@@ -198,7 +198,7 @@ class DriverAdapter
             return $this->returnCacheItem($this->cache[$key]);
         }
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $found = false;
             ++$this->cache_misses;
 
@@ -299,16 +299,6 @@ class DriverAdapter
     }
 
     /**
-     * @param string $group
-     *
-     * @return bool
-     */
-    private function isIgnoredGroup(string $group)
-    {
-        return \in_array($group, $this->ignored_groups);
-    }
-
-    /**
      * @param string|array           $key
      * @param mixed|null             $data
      * @param string                 $group
@@ -364,7 +354,7 @@ class DriverAdapter
             return $result;
         }
 
-        if (!$this->isIgnoredGroup($group)) {
+        if (!\in_array($group, $this->ignored_groups)) {
             $key = $this->sanitizeKey($key, $group);
 
             try {
@@ -436,7 +426,7 @@ class DriverAdapter
 
         $result = $this->deleteFromInternalCache($key);
 
-        if (!$this->isIgnoredGroup($group)) {
+        if (!\in_array($group, $this->ignored_groups)) {
             try {
                 $result = $this->cache_instance->deleteItem($key);
             } catch (\Exception $e) {
@@ -466,7 +456,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $value = $this->getFromInternalCache($key);
             $value -= $offset;
 
@@ -518,7 +508,7 @@ class DriverAdapter
 
         $key = $this->sanitizeKey($key, $group);
 
-        if ($this->isIgnoredGroup($group)) {
+        if (\in_array($group, $this->ignored_groups)) {
             $value = $this->getFromInternalCache($key);
             $value += $offset;
 
