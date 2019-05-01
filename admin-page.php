@@ -30,14 +30,14 @@
                         <td><code><?php echo $object_cache_data->getSize(); ?></code></td>
                     </tr>
 
-                    <?php if ( ! empty($data)): ?>
+                    <?php if (!empty($data)): ?>
                         <tr>
                             <th><?php esc_html_e('Data:', $this->page_slug); ?></th>
                             <td><code><?php var_export($data); ?></code></td>
                         </tr>
                     <?php endif; ?>
 
-                    <?php if ( ! empty($rawData)): ?>
+                    <?php if (!empty($rawData)): ?>
                         <tr>
                             <th><?php esc_html_e('Raw Data:', $this->page_slug); ?></th>
                             <td><code><?php var_export($rawData); ?></code></td>
@@ -50,24 +50,43 @@
             <p class="submit">
 
                 <?php if ($this->getCacheStatus()) : ?>
+                    <?php
 
-                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'flush-cache',
-                        $this->page)), 'flush-cache'); ?>"
+                    $link_url = wp_nonce_url(network_admin_url(add_query_arg('action', 'flush-cache', $this->page)),
+                        'flush-cache');
+
+                    ?>
+
+                    <a href="<?php echo esc_attr($link_url); ?>"
                        class="button button-primary button-large">
                         <?php esc_html_e('Flush Cache', $this->page_slug); ?>
                     </a>
                 <?php endif; ?>
 
-                <?php if ( ! $this->objectCacheDropinExists()) : ?>
-                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'enable-cache',
-                        $this->page)), 'enable-cache'); ?>"
+                <?php if (!$this->objectCacheDropinExists()) : ?>
+
+                    <?php
+
+                    $link_url = wp_nonce_url(network_admin_url(add_query_arg('action', 'enable-cache', $this->page)),
+                        'enable-cache');
+
+                    ?>
+
+                    <a href="<?php echo esc_attr($link_url); ?>"
                        class="button button-primary button-large">
                         <?php esc_html_e('Enable Object Cache', $this->page_slug); ?>
                     </a>
 
                 <?php elseif ($this->validateObjectCacheDropin()) : ?>
-                    <a href="<?php echo wp_nonce_url(network_admin_url(add_query_arg('action', 'disable-cache',
-                        $this->page)), 'disable-cache'); ?>"
+
+                    <?php
+
+                    $link_url = wp_nonce_url(network_admin_url(add_query_arg('action', 'disable-cache', $this->page)),
+                        'disable-cache');
+
+                    ?>
+
+                    <a href="<?php echo esc_attr($link_url); ?>"
                        class="button button-secondary button-large delete">
                         <?php esc_html_e('Disable Object Cache', $this->page_slug); ?>
                     </a>
