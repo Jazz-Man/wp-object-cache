@@ -3,21 +3,18 @@
 namespace JazzMan\WPObjectCache;
 
 use tidy;
-use WP_REST_Request;
 
 /**
  * Class OutputCache.
  */
 class OutputCache
 {
-
-    private static $unique = [];
     private $cache_group = 'output_cache';
 
     /**
      * @var
      */
-    private $request;
+    private $request_method;
     /**
      * @var int
      */
@@ -122,12 +119,6 @@ class OutputCache
      * @var array
      */
     private $headers = [];
-    /**
-     * Set false to disable Last-Modified and Cache-Control headers.
-     *
-     * @var bool
-     */
-    private $cache_control = true;
 
     /**
      * OutputCache constructor.
@@ -138,15 +129,7 @@ class OutputCache
 
         $this->started = time();
 
-
-        $this->request = new WP_REST_Request($_SERVER['REQUEST_METHOD'], $this->getUrlInfo()->path);
-
-        if (!empty($this->getUrlInfo()->query)) {
-            wp_parse_str($this->getUrlInfo()->query, $query);
-            $this->request->set_query_params(wp_unslash($query));
-        }
-
-        $this->request->set_headers($this->getHttpHeaders(wp_unslash($_SERVER)));
+        $this->request_method = $_SERVER['REQUEST_METHOD'];
 
         if (self::enabled()) {
             return;
@@ -157,7 +140,8 @@ class OutputCache
         $this->run();
     }
 
-    private function setupCacheGroup(){
+    private function setupCacheGroup()
+    {
         wp_cache_add_global_groups($this->cache_group);
     }
 
@@ -228,34 +212,9 @@ class OutputCache
 
     public function run()
     {
-        // Necessary to prevent clients using cached version after login cookies
-        // set. If this is a problem, comment it out and remove all
-        // Last-Modified headers.
-        @header('Vary: Cookie', false);
-
         $this->setupKeys();
         $this->setupUrlKey();
-        $this->doVariants();
         $this->generateKeys();
-
-        $request_hash = [
-            'request'=>$this->getCurrentUrl(),
-            'host'=>$this->getUrlInfo()->host,
-            'https'=>! empty( $_SERVER['HTTPS'] ) ? $_SERVER['HTTPS'] : '',
-            'method' => $_SERVER['REQUEST_METHOD'],
-            'unique' => self::$unique,
-            'cookies' => self::parse_cookies( $_COOKIE ),
-        ];
-
-        if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-            $request_hash['unique']['pj-auth-header'] = $_SERVER['HTTP_AUTHORIZATION'];
-        }
-
-        $request_hash = md5( serialize( $request_hash ) );
-
-        if ( self::is_cache_debug() ) {
-            header( 'X-Pj-Cache-Key: ' . $request_hash );
-        }
 
         $this->maybeUpdateCache();
         $this->maybeOutputCache();
@@ -269,11 +228,8 @@ class OutputCache
         add_filter('status_header', [$this, 'statusHeader'], 10, 2);
         add_filter('wp_redirect_status', [$this, 'redirectStatus'], 10, 2);
 
-
         // Start the spidey-sense listening
         ob_start([$this, 'ob']);
-
-//        dump($this->redirect_status);
     }
 
     /**
@@ -287,9 +243,6 @@ class OutputCache
      */
     protected function ob($output = '')
     {
-
-
-        // $wp_object_cache was clobbered in wp-settings.php so repeat this
         $this->setupCacheGroup();
 
         // Unlock regeneration
@@ -302,7 +255,7 @@ class OutputCache
         }
 
         // Do not cache 5xx responses
-        if (isset($this->status_code) && 5 === (int) ($this->status_code / 100)) {
+        if (isset($this->status_code) && (int) $this->status_code >= 500) {
             return $output;
         }
 
@@ -343,7 +296,7 @@ class OutputCache
 
             foreach ((array) $values as $value) {
                 if (preg_match('/^Cache-Control:.*max-?age=(\d+)/i', "{$header}: {$value}", $matches)) {
-                    $this->max_age = (int)$matches[1];
+                    $this->max_age = (int) $matches[1];
                 }
             }
         }
@@ -356,130 +309,33 @@ class OutputCache
         wp_cache_set($this->key, $this->cache, $this->cache_group, $this->cache['expires']);
         wp_cache_set($this->key, $this->cache, $this->cache_group, $this->cache['expires']);
 
-        // Cache control
-        if (true === $this->cache_control) {
-            // Don't clobber Last-Modified header if already set, e.g. by WP::send_headers()
-            if (!isset($this->cache['headers']['Last-Modified'])) {
-                @header('Last-Modified: '.gmdate('D, d M Y H:i:s', $this->cache['time']).' GMT', true);
-            }
-
-            if (!isset($this->cache['headers']['Cache-Control'])) {
-                @header("Cache-Control: max-age={$this->max_age}, must-revalidate", false);
-            }
-        }
-
         $this->doHeaders($this->headers);
 
-        // Add some debug info just before <head
-
-        if (self::is_cache_debug()){
-            $this->addDebugJustCached();
-        }
-
         // Pass output to next ob handler
-        return $this->cache['output'];
+        return $output;
     }
 
     /**
-     * @param array $server
-     *
-     * @return array
+     * @return array|string
      */
-    private function getHttpHeaders(array $server)
+    private function getQueryParams()
     {
-        $headers = [];
+        if (!empty($this->getUrlInfo()->query)) {
+            wp_parse_str($this->getUrlInfo()->query, $query);
 
-        // CONTENT_* headers are not prefixed with HTTP_.
-        $additional = ['CONTENT_LENGTH' => true, 'CONTENT_MD5' => true, 'CONTENT_TYPE' => true];
-
-        foreach ($server as $key => $value) {
-            if (0 === strpos($key, 'HTTP_')) {
-                $headers[substr($key, 5)] = $value;
-            } elseif (isset($additional[$key])) {
-                $headers[$key] = $value;
-            }
+            return wp_unslash($query);
         }
 
-        return $headers;
-    }
-
-    /**
-     * @param string $url
-     *
-     * @return array|bool|\WP_Post|null
-     */
-    private function getPostFormUrl(string $url)
-    {
-        $result = false;
-
-        $url = filter_var($url, FILTER_VALIDATE_URL);
-
-        if (!empty($url)) {
-            global $wpdb;
-
-            $home_url = home_url();
-
-            $home_url_info = (object) parse_url($home_url);
-
-            $url_info = (object) parse_url($url);
-
-            if ($url_info && $url_info->host !== $home_url_info->host) {
-                return $result;
-            }
-
-            if (!empty($url_info->query)) {
-                parse_str($url_info->query, $query);
-
-                $query = array_filter($query, static function ($value, $key) {
-                    return \in_array($key, ['p', 'page_id', 'attachment_id'], true);
-                }, ARRAY_FILTER_USE_BOTH);
-
-                if (!empty($query)) {
-                    return get_post((int) $query[key($query)]);
-                }
-            }
-
-            $url_info->scheme = $home_url_info->scheme;
-
-            if (false !== strpos($home_url_info->host, 'www.') && false === strpos($url_info->host, 'www.')) {
-                $url_info->host = "www.{$url_info->host}";
-            } elseif (false === strpos($home_url_info->host, 'www.')) {
-                $url_info->host = ltrim($url_info->host, 'www.');
-            }
-
-            if (trim($url, '/') === $home_url && 'page' === get_option('show_on_front')) {
-                $page_on_front = get_option('page_on_front');
-
-                if ($page_on_front) {
-                    return get_post($page_on_front);
-                }
-            }
-
-            $url = trailingslashit("{$url_info->scheme}://{$url_info->host}{$url_info->path}");
-
-            $sql = $wpdb->prepare("SELECT SQL_CALC_FOUND_ROWS ID FROM $wpdb->posts p WHERE p.guid = %s LIMIT 1", [
-                $url,
-            ]);
-
-            $results = $wpdb->get_var($sql);
-
-            if (!empty($results)) {
-                return get_post((int) $results);
-            }
-
-            return $result;
-        }
-
-        return $result;
+        return [];
     }
 
     private function setupKeys()
     {
         $this->keys = [
             'host' => $this->getUrlInfo()->host,
-            'method' => $this->request->get_method(),
+            'method' => $this->request_method,
             'path' => $this->getUrlInfo()->path,
-            'query' => $this->request->get_query_params(),
+            'query' => $this->getQueryParams(),
             'ssl' => is_ssl(),
         ];
     }
@@ -489,30 +345,6 @@ class OutputCache
         $this->url_key = md5($this->getCurrentUrl());
 
         $this->url_version = (int) wp_cache_get("{$this->url_key}_version", $this->cache_group);
-    }
-
-    /**
-     * Set the cache with it's variant keys.
-     *
-     * @param bool $dimensions
-     */
-    private function doVariants($dimensions = false)
-    {
-        // This function is called without arguments early in the page load,
-        // then with arguments during the OB handler.
-
-        if (false === $dimensions) {
-            $dimensions = wp_cache_get("{$this->url_key}_vary", $this->cache_group);
-        } elseif (!empty($dimensions)) {
-            wp_cache_set("{$this->url_key}_vary", $dimensions, $this->cache_group, $this->max_age + 10);
-        }
-
-        // Bail if no dimensions
-        if (empty($dimensions) || !\is_array($dimensions)) {
-            return;
-        }
-
-        //        dump($dimensions);
     }
 
     /**
@@ -567,25 +399,7 @@ class OutputCache
         // Maybe perform a redirection
         $this->maybeDoRedirect();
 
-        // Use the spider_cache save time for Last-Modified so we can issue
-        // "304 Not Modified" but don't clobber a cached Last-Modified header.
-        if ((true === $this->cache_control) && !isset($this->cache['headers']['Last-Modified'][0])) {
-            @header('Last-Modified: '.gmdate('D, d M Y H:i:s', $this->cache['time']).' GMT', true);
-            @header('Cache-Control: max-age='.($this->cache['max_age'] - $this->started + $this->cache['time']).', must-revalidate',
-                true);
-        }
-
-        if (self::is_cache_debug()){
-            $this->addDebugFromCache();
-        }
-
         $this->doHeaders($this->headers, $this->cache['headers']);
-
-        // Bail if not modified
-        if ($this->notModified()) {
-            @header('HTTP/1.1 304 Not Modified', true, 304);
-            die;
-        }
 
         // Set header if cached
         if (!empty($this->cache['status_header'])) {
@@ -594,29 +408,23 @@ class OutputCache
 
         $tidy = new tidy();
 
-        $tidy->parseString($this->cache['output'],[
-            'clean'=>true,
-            'merge-divs'=>false,
-            'join-classes'=>true,
-            'hide-comments'=>true,
-            'hide-endtags'=>true,
-//            'break-before-br'=>true,
-            'indent'=>true,
-            'indent-attributes'=>true,
-            'punctuation-wrap'=>true,
-//            'wrap-attributes'=>true,
-//            'wrap-script-literals'=>true,
-//            'decorate-inferred-ul'=>true,
-
+        $tidy->parseString($this->cache['output'], [
+            'clean' => true,
+            'merge-divs' => false,
+            'join-classes' => true,
+            'hide-comments' => true,
+            'hide-endtags' => true,
+            'indent' => true,
+            'indent-cdata' => true,
+            'indent-attributes' => true,
+            'punctuation-wrap' => true,
+            'wrap-attributes' => true,
+            'drop-empty-paras' => true,
         ]);
         $tidy->cleanRepair();
 
-//        $string = gzcompress((string)$tidy,-1);
-//
-//        dump($string);
-
         // Have you ever heard a death rattle before?
-        die((string)$tidy);
+        die((string) $tidy);
     }
 
     /**
@@ -699,34 +507,6 @@ class OutputCache
     }
 
     /**
-     * Has the cached page changed?
-     */
-    private function notModified()
-    {
-        // Default value
-        $three_oh_four = false;
-
-        // Respect ETags served with feeds.
-        if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && isset($this->cache['headers']['ETag'][0]) && ($_SERVER['HTTP_IF_NONE_MATCH'] == $this->cache['headers']['ETag'][0])) {
-            $three_oh_four = true;
-
-        // Respect If-Modified-Since.
-        } elseif ((true === $this->cache_control) && isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-            // Get times
-            $client_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
-            $cache_time = isset($this->cache['headers']['Last-Modified'][0]) ? strtotime($this->cache['headers']['Last-Modified'][0]) : $this->cache['time'];
-
-            // Maybe 304
-            if ($client_time >= $cache_time) {
-                $three_oh_four = true;
-            }
-        }
-
-        // Return 304 status
-        return $three_oh_four;
-    }
-
-    /**
      * @return bool
      */
     private static function is_cli()
@@ -785,14 +565,16 @@ class OutputCache
     /**
      * @return bool
      */
-    private static function is_user_logged_in(){
-        return \is_user_logged_in();
+    private static function is_user_logged_in()
+    {
+        return is_user_logged_in();
     }
 
     /**
      * @return bool
      */
-    private static function is_cache_debug(){
+    private static function is_cache_debug()
+    {
         return \defined('WP_CACHE_DEBUG') && WP_CACHE_DEBUG;
     }
 
@@ -802,7 +584,8 @@ class OutputCache
      *
      * @return string
      */
-    private function timerStop($display = true, $precision = 3){
+    private function timerStop($display = true, $precision = 3)
+    {
         global $timestart, $timeend;
 
         $mtime = microtime();
@@ -816,77 +599,5 @@ class OutputCache
         }
 
         return $r;
-    }
-
-    private function addDebugFromCache(){
-        $time = $this->started;
-        $seconds_ago = $time - $this->cache['time'];
-        $generation = $this->cache['timer'];
-        $serving = $this->timerStop(false, 3);
-        $expires = $this->cache['max_age'] - $time + $this->cache['time'];
-        $html = <<<HTML
-<!--
-	generated {$seconds_ago} seconds ago
-	generated in {$generation} seconds
-	served from Spider-Cache in {$serving} seconds
-	expires in {$expires} seconds
--->
-
-HTML;
-        $this->addDebugHtmlToOutput($html);
-    }
-
-    /**
-     * @param string $html
-     */
-    private function addDebugHtmlToOutput(string $html)
-    {
-        // Casing on the Content-Type header is inconsistent
-        foreach (['Content-Type', 'Content-type'] as $key) {
-            if (isset($this->cache['headers'][$key][0]) && 0 !== strpos($this->cache['headers'][$key][0], 'text/html')) {
-                return;
-            }
-        }
-
-
-        // Bail if output does not include a head tag
-        $head_position = strpos($this->cache['output'], '<head');
-
-        if (false === $head_position) {
-            return;
-        }
-
-        // Put debug HTML ahead of the <head> tag
-        $this->cache['output'] = substr_replace($this->cache['output'], $html, $head_position, 0);
-    }
-
-    private function addDebugJustCached()
-    {
-        $generation = $this->cache['timer'];
-        $bytes = strlen(serialize($this->cache));
-        $html = <<<HTML
-<!--
-	generated in {$generation} seconds
-	{$bytes} bytes Spider-Cached for {$this->max_age} seconds
--->
-
-HTML;
-        $this->addDebugHtmlToOutput($html);
-    }
-
-    private static function parse_cookies(array $cookies)
-    {
-        foreach ( $cookies as $key => $value ) {
-//            if ( in_array( strtolower( $key ), self::$ignore_cookies ) ) {
-//                unset( $cookies[ $key ] );
-//                continue;
-//            }
-            // Skip cookies beginning with _
-            if (strpos($key, '_') === 0) {
-                unset( $cookies[ $key ] );
-                continue;
-            }
-        }
-        return $cookies;
     }
 }
