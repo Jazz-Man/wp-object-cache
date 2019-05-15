@@ -69,6 +69,7 @@ class DriverAdapter
     private function setCacheGroups()
     {
         $this->global_groups = [
+            'output_cache',
             'users',
             'userlogins',
             'usermeta',
