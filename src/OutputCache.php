@@ -2,8 +2,6 @@
 
 namespace JazzMan\WPObjectCache;
 
-use tidy;
-
 /**
  * Class OutputCache.
  */
@@ -12,7 +10,7 @@ class OutputCache
     private $cache_group = 'output_cache';
 
     /**
-     * @var
+     * @var string
      */
     private $request_method;
     /**
@@ -25,8 +23,9 @@ class OutputCache
      */
     private $url_info;
 
+
     /**
-     * @var
+     * @var float|int
      */
     private $max_age = MINUTE_IN_SECONDS * 10;
 
@@ -66,10 +65,6 @@ class OutputCache
      * @var int
      */
     private $url_version;
-    /**
-     * @var string
-     */
-    private $status_header;
 
     /**
      * These headers will never be cached. Apply strtolower.
@@ -135,28 +130,7 @@ class OutputCache
             return;
         }
 
-        $this->setupCacheGroup();
-
         $this->run();
-    }
-
-    private function setupCacheGroup()
-    {
-        wp_cache_add_global_groups($this->cache_group);
-    }
-
-    /**
-     * @param string $status_header
-     * @param int    $status_code
-     *
-     * @return mixed
-     */
-    public function statusHeader(string $status_header, int $status_code = 200)
-    {
-        $this->status_header = $status_header;
-        $this->status_code = $status_code;
-
-        return $status_header;
     }
 
     /**
@@ -225,7 +199,6 @@ class OutputCache
         }
 
         // Headers and such
-        add_filter('status_header', [$this, 'statusHeader'], 10, 2);
         add_filter('wp_redirect_status', [$this, 'redirectStatus'], 10, 2);
 
         // Start the spidey-sense listening
@@ -243,7 +216,7 @@ class OutputCache
      */
     protected function ob($output = '')
     {
-        $this->setupCacheGroup();
+        $this->status_code = http_response_code();
 
         // Unlock regeneration
         wp_cache_delete("{$this->url_key}_genlock", $this->cache_group);
@@ -255,7 +228,7 @@ class OutputCache
         }
 
         // Do not cache 5xx responses
-        if (isset($this->status_code) && (int) $this->status_code >= 500) {
+        if (isset($this->status_code) && $this->status_code >= 500) {
             return $output;
         }
 
@@ -267,8 +240,7 @@ class OutputCache
             'output' => $output,
             'time' => $this->started,
             'headers' => [],
-            'timer' => $this->timerStop(false, 3),
-            'status_header' => $this->status_header,
+            'status_header' => $this->status_code,
             'redirect_status' => $this->redirect_status,
             'redirect_location' => $this->redirect_location,
             'version' => $this->url_version,
@@ -306,7 +278,6 @@ class OutputCache
         $this->cache['expires'] = $this->max_age + $this->seconds + 30;
 
         // Set cache
-        wp_cache_set($this->key, $this->cache, $this->cache_group, $this->cache['expires']);
         wp_cache_set($this->key, $this->cache, $this->cache_group, $this->cache['expires']);
 
         $this->doHeaders($this->headers);
@@ -357,14 +328,14 @@ class OutputCache
 
     private function maybeUpdateCache()
     {
-        // Get the spider_cache
+        // Get the cache
         $this->cache = wp_cache_get($this->key, $this->cache_group);
 
         // Are we only caching frequently-requested pages?
         if (($this->seconds < 1) || ($this->times < 2)) {
             $this->do = true;
 
-        // No spider_cache item found, or ready to sample traffic again at the end of the spider_cache life?
+        // No _cache item found, or ready to sample traffic again at the end of the cache life?
         } elseif (!\is_array($this->cache) || ($this->started >= ($this->cache['time'] + $this->max_age - $this->seconds))) {
             wp_cache_add($this->req_key, 0, $this->cache_group);
 
@@ -403,28 +374,11 @@ class OutputCache
 
         // Set header if cached
         if (!empty($this->cache['status_header'])) {
-            @header($this->cache['status_header'], true);
+            status_header($this->cache['status_header']);
         }
 
-        $tidy = new tidy();
-
-        $tidy->parseString($this->cache['output'], [
-            'clean' => true,
-            'merge-divs' => false,
-            'join-classes' => true,
-            'hide-comments' => true,
-            'hide-endtags' => true,
-            'indent' => true,
-            'indent-cdata' => true,
-            'indent-attributes' => true,
-            'punctuation-wrap' => true,
-            'wrap-attributes' => true,
-            'drop-empty-paras' => true,
-        ]);
-        $tidy->cleanRepair();
-
         // Have you ever heard a death rattle before?
-        die((string) $tidy);
+        die($this->cache['output']);
     }
 
     /**
@@ -437,35 +391,7 @@ class OutputCache
             // Do headers
             $this->doHeaders($this->headers);
 
-            // From vars.php
-            $is_IIS = (false !== strpos($_SERVER['SERVER_SOFTWARE'],
-                    'Microsoft-IIS') || false !== strpos($_SERVER['SERVER_SOFTWARE'], 'ExpressionDevServer'));
-
-            // IIS
-            if (!empty($is_IIS)) {
-                @header("Refresh: 0;url={$this->cache['redirect_location']}");
-            } else {
-                if (\PHP_SAPI !== 'cgi-fcgi') {
-                    $texts = [
-                        300 => 'Multiple Choices',
-                        301 => 'Moved Permanently',
-                        302 => 'Found',
-                        303 => 'See Other',
-                        304 => 'Not Modified',
-                        305 => 'Use Proxy',
-                        306 => 'Reserved',
-                        307 => 'Temporary Redirect',
-                    ];
-
-                    // Get the protocol
-                    $protocol = wp_get_server_protocol();
-
-                    // Found/Redirect header
-                    isset($texts[$this->cache['redirect_status']]) ? @header("{$protocol} {$this->cache['redirect_status']} {$texts[$this->cache['redirect_status']]}") : @header("{$protocol} 302 Found");
-                }
-
-                @header("Location: {$this->cache['redirect_location']}");
-            }
+            wp_safe_redirect($this->cache['redirect_location'], $this->cache['redirect_status']);
 
             // Exit so redirect takes effect
             exit;
@@ -576,28 +502,5 @@ class OutputCache
     private static function is_cache_debug()
     {
         return \defined('WP_CACHE_DEBUG') && WP_CACHE_DEBUG;
-    }
-
-    /**
-     * @param bool $display
-     * @param int  $precision
-     *
-     * @return string
-     */
-    private function timerStop($display = true, $precision = 3)
-    {
-        global $timestart, $timeend;
-
-        $mtime = microtime();
-        $mtime = explode(' ', $mtime);
-        $timeend = $mtime[1] + $mtime[0];
-        $timetotal = $timeend - $timestart;
-        $r = number_format($timetotal, $precision);
-
-        if (true === $display) {
-            echo $r;
-        }
-
-        return $r;
     }
 }
