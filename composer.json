@@ -18,10 +18,10 @@
   },
   "require": {
     "php": ">=7.1",
+    "ext-ctype": "*",
     "ext-redis": "*",
     "composer/installers": "^1",
     "jazzman/singleton-trait": "^1.1",
-    "phpfastcache/phpfastcache": "^7.0",
     "roots/wordpress": "^5"
   },
   "require-dev": {
@@ -41,5 +41,10 @@
     "psr-4": {
       "JazzMan\\WPObjectCache\\": "src"
     }
+  },
+  "replace": {
+    "symfony/polyfill-mbstring": "*",
+    "symfony/polyfill-php80": "*",
+    "symfony/polyfill-php72": "*"
   }
 }
