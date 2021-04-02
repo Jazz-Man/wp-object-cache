@@ -17,15 +17,25 @@
     "apcu-autoloader": true
   },
   "require": {
-    "php": ">=7.0",
+    "php": ">=7.1",
+    "ext-redis": "*",
     "composer/installers": "^1",
     "jazzman/singleton-trait": "^1.1",
-    "phpfastcache/phpfastcache": "^7.0"
+    "phpfastcache/phpfastcache": "^7.0",
+    "roots/wordpress": "^5"
   },
   "require-dev": {
     "dg/composer-cleaner": "^2.1",
     "roave/security-advisories": "dev-master",
     "symfony/var-dumper": "^4.2"
+  },
+  "extra": {
+    "installer-paths": {
+      "vendor/wp/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
+      "vendor/wp/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+      "vendor/wp/wp-content/themes/{$name}/": ["type:wordpress-theme"]
+    },
+    "wordpress-install-dir": "vendor/wp"
   },
   "autoload": {
     "psr-4": {
