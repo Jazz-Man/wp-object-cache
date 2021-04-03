@@ -119,7 +119,7 @@ class WPObjectCache
                 if (version_compare($dropin['Version'], $plugin['Version'], '<')) {
                     $message = sprintf(
                         __(
-                            'The object cache drop-in is outdated. Please <a href="%s">update it now</a>.',
+                            '<strong>The object cache drop-in is outdated.</strong> Please <a href="%s">update it now</a>.',
                             $this->pageSlug
                         ),
                         $url
@@ -127,13 +127,13 @@ class WPObjectCache
                 }
             } else {
                 $message = sprintf(
-                    __('An unknown object cache drop-in was found. To use WP Object Cache , <a href="%s">please replace it now</a>.', $this->pageSlug),
+                    __('<strong>An unknown object cache drop-in was found</strong>. To use WP Object Cache , <a href="%s">please replace it now</a>.', $this->pageSlug),
                     $url
                 );
             }
 
             if (isset($message)) {
-                printf('<div class="update-nag">%s</div>', $message);
+                $this->printNotice($message);
             }
         } else {
             $enableUrl = wp_nonce_url(
@@ -143,18 +143,18 @@ class WPObjectCache
 
             $message = sprintf(
                 __(
-                    'WP Object Cache is not used. To use WP Object Cache , <a href="%s">please enable it now</a>.',
+                    '<strong>WP Object Cache is not used.</strong> To use WP Object Cache , <a href="%s">please enable it now</a>.',
                     $this->pageSlug
                 ),
                 $enableUrl
             );
 
-            printf('<div class="update-nag">%s</div>', $message);
+            $this->printNotice($message);
         }
     }
 
     /**
-     * @param  string[]  $actions
+     * @param string[] $actions
      *
      * @return string[]
      */
@@ -201,8 +201,96 @@ class WPObjectCache
             }
         }
 
-        // show admin page
-        require_once $this->rootDir.'/admin-page.php';
+        if (!$this->validateObjectCacheDropin()) {
+            return;
+        }
+
+        $redis = wp_object_cache_instance();
+
+        $content = sprintf(
+            '<p class="submit">%s<br/>%s<br/>%s</p>',
+            $this->isRedisEnabled() ?
+                $this->buildAdminLink(
+                    'Flush Cache',
+                    wp_nonce_url(network_admin_url(add_query_arg('action', 'flush-cache', $this->page)), 'flush-cache')
+                ) :
+                '',
+            !$this->objectCacheDropinExists() ?
+                $this->buildAdminLink(
+                    'Enable Object Cache',
+                    wp_nonce_url(
+                        network_admin_url(add_query_arg('action', 'enable-cache', $this->page)),
+                        'enable-cache'
+                    )
+                ) :
+                '',
+            $this->validateObjectCacheDropin() ?
+                $this->buildAdminLink(
+                    'Disable Object Cache',
+                    wp_nonce_url(
+                        network_admin_url(add_query_arg('action', 'disable-cache', $this->page)),
+                        'disable-cache'
+                    )
+                ) : ''
+        );
+
+        $content .= $this->buildFormTable('Redis COMANDSTATS', $redis->info('COMANDSTATS'));
+        $content .= $this->buildFormTable('Redis KEYSPACE', $redis->info('KEYSPACE'));
+        $content .= $this->buildFormTable('Redis CLASTER', $redis->info('CLASTER'));
+        $content .= $this->buildFormTable('Redis CPU', $redis->info('CPU'));
+        $content .= $this->buildFormTable('Redis REPLICATION', $redis->info('REPLICATION'));
+        $content .= $this->buildFormTable('Redis PERSISTENCE', $redis->info('PERSISTENCE'));
+        $content .= $this->buildFormTable('Redis MEMORY', $redis->info('MEMORY'));
+        $content .= $this->buildFormTable('Redis CLIENTS', $redis->info('CLIENTS'));
+        $content .= $this->buildFormTable('Redis SERVER', $redis->info('SERVER'));
+        $content .= $this->buildFormTable('Redis STATS', $redis->info('STATS'));
+
+        $this->buildAdminWrapper($content);
+    }
+
+    private function printNotice(string $message): void
+    {
+        printf('<div class="update-nag notice notice-warning">%s</div>', $message);
+    }
+
+    private function buildAdminLink(string $label, string $link): string
+    {
+        return sprintf(
+            '<a href="%s" class="button button-primary button-large">%s</a>',
+            $link,
+            esc_html($label)
+        );
+    }
+
+    private function buildAdminWrapper(string $content): void
+    {
+        printf(
+            '<div class="wrap"><h1>%s</h1><div class="section-overview">%s</div></div>',
+            esc_html__('WP Object Cache', $this->pageSlug),
+            $content
+        );
+    }
+
+
+    private function buildFormTable(string $label, array $info): string
+    {
+        $columnts = '';
+
+        foreach ($info as $key => $item) {
+            $name = app_get_human_friendly($key);
+
+            $columnts .= sprintf(
+                '<tr><th>%s</th><td><code>%s</code></td></tr>',
+                esc_attr($name),
+                esc_attr($item)
+            );
+        }
+
+        return sprintf(
+            '<div class="section-overview"><h2 class="title">%s</h2><table class="fixed striped widefat wp-list-table"><tbody>%s</tbody></table><div',
+            esc_attr($label),
+            $columnts
+        );
     }
 
     /**
@@ -256,12 +344,6 @@ class WPObjectCache
         return $dropin['PluginURI'] === $plugin['PluginURI'];
     }
 
-    /**
-     * @param  string  $action
-     * @param  string  $label
-     *
-     * @return string
-     */
     private function getLink(string $action = 'flush-cache', string $label = 'Flush Cache'): string
     {
         $action = esc_attr($action);
@@ -276,9 +358,6 @@ class WPObjectCache
         );
     }
 
-    /**
-     * @return bool
-     */
     private function isRedisEnabled(): bool
     {
         if ($this->validateObjectCacheDropin()) {
