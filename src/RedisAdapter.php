@@ -114,6 +114,15 @@ class RedisAdapter
             $this->blogPrefix = (is_multisite() ? $blog_id : $table_prefix);
         }
 
+        if (defined('WP_REDIS_IGNORED_GROUPS') && \is_array(WP_REDIS_IGNORED_GROUPS)) {
+            $this->ignoredGroups = WP_REDIS_IGNORED_GROUPS;
+        }
+
+        $this->initRedis();
+    }
+
+    private function initRedis(): void
+    {
         $parameters = [
             'scheme' => 'tcp',
             'host' => '127.0.0.1',
@@ -122,24 +131,27 @@ class RedisAdapter
             'read_timeout' => 5,
             'retry_interval' => null,
             'compression_level' => 5,
-            'prefix' => DB_NAME,
         ];
 
-        foreach (
-            [
-                'scheme',
-                'host',
-                'port',
-                'path',
-                'password',
-                'database',
-                'timeout',
-                'read_timeout',
-                'retry_interval',
-                'prefix',
-                'compression_level',
-            ] as $setting
-        ) {
+        if (defined('DB_NAME')) {
+            $parameters['prefix'] = DB_NAME;
+        }
+
+        $settings = [
+            'scheme',
+            'host',
+            'port',
+            'path',
+            'password',
+            'database',
+            'timeout',
+            'read_timeout',
+            'retry_interval',
+            'prefix',
+            'compression_level',
+        ];
+
+        foreach ($settings as $setting) {
             $constant = \sprintf('WP_REDIS_%s', \strtoupper($setting));
 
             if (defined($constant)) {
@@ -147,21 +159,14 @@ class RedisAdapter
             }
         }
 
-        if (defined('WP_REDIS_IGNORED_GROUPS') && \is_array(WP_REDIS_IGNORED_GROUPS)) {
-            $this->ignoredGroups = WP_REDIS_IGNORED_GROUPS;
-        }
-
         try {
-            $phpredis_version = (string) \phpversion('redis');
+            $version = (string) \phpversion('redis');
 
-            $this->redisClient = \sprintf(
-                'PhpRedis (v%s)',
-                $phpredis_version
-            );
+            $this->redisClient = \sprintf('PhpRedis (v%s)', $version);
 
             $this->redis = new Redis();
 
-            $connection_args = [
+            $connectionArgs = [
                 $parameters['host'],
                 $parameters['port'],
                 $parameters['timeout'],
@@ -170,7 +175,7 @@ class RedisAdapter
             ];
 
             if (0 === \strcasecmp('tls', $parameters['scheme'])) {
-                $connection_args[0] = \sprintf(
+                $connectionArgs[0] = \sprintf(
                     '%s://%s',
                     $parameters['scheme'],
                     \str_replace('tls://', '', $parameters['host'])
@@ -178,60 +183,17 @@ class RedisAdapter
             }
 
             if (0 === \strcasecmp('unix', $parameters['scheme'])) {
-                $connection_args[0] = $parameters['path'];
-                $connection_args[1] = null;
+                $connectionArgs[0] = $parameters['path'];
+                $connectionArgs[1] = null;
             }
 
-            if (version_compare($phpredis_version, '3.1.3', '>=')) {
-                $connection_args[] = $parameters['read_timeout'];
+            if (version_compare($version, '3.1.3', '>=')) {
+                $connectionArgs[] = $parameters['read_timeout'];
             }
 
-            \call_user_func_array(
-                [$this->redis, 'connect'],
-                $connection_args
-            );
+            \call_user_func_array([$this->redis, 'connect'], $connectionArgs);
 
-            if (isset($parameters['password'])) {
-                $this->redis->auth($parameters['password']);
-            }
-
-            if (isset($parameters['database'])) {
-                if (\ctype_digit($parameters['database'])) {
-                    $parameters['database'] = (int) ($parameters['database']);
-                }
-
-                $this->redis->select($parameters['database']);
-            }
-
-            if (defined('Redis::SERIALIZER_IGBINARY')) {
-                $this->redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY);
-            }
-
-            if (defined('Redis::COMPRESSION_LZF')) {
-                $this->redis->setOption(Redis::OPT_COMPRESSION, Redis::COMPRESSION_LZF);
-
-                $compression_level = \filter_var(
-                    $parameters['compression_level'],
-                    FILTER_VALIDATE_INT,
-                    [
-                        'options' => [
-                            'min_range' => 1,
-                            'max_range' => 9,
-                        ],
-                    ]
-                );
-
-                if ($compression_level) {
-                    $this->redis->setOption(Redis::OPT_COMPRESSION_LEVEL, (int) $compression_level);
-                }
-            }
-
-            if (!empty($parameters['prefix'])) {
-                if (defined('Redis::SCAN_PREFIX')) {
-                    $this->redis->setOption(Redis::OPT_SCAN, Redis::SCAN_PREFIX);
-                }
-                $this->redis->setOption(Redis::OPT_PREFIX, "{$parameters['prefix']}_{$this->blogPrefix}:");
-            }
+            $this->setRedisOption($parameters);
 
             $this->redis->ping();
 
@@ -248,6 +210,68 @@ class RedisAdapter
     }
 
     /**
+     * @param mixed $parameters
+     */
+    private function setRedisOption(array $parameters): void
+    {
+        if (isset($parameters['password'])) {
+            $this->redis->auth($parameters['password']);
+        }
+
+        if (isset($parameters['database'])) {
+            if (\ctype_digit($parameters['database'])) {
+                $parameters['database'] = (int) ($parameters['database']);
+            }
+
+            $this->redis->select($parameters['database']);
+        }
+
+        if (defined('Redis::SERIALIZER_IGBINARY')) {
+            $this->redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY);
+        }
+
+        if (defined('Redis::COMPRESSION_LZF')) {
+            $this->redis->setOption(Redis::OPT_COMPRESSION, Redis::COMPRESSION_LZF);
+
+            $level = $this->validateCompressionLevel($parameters['compression_level']);
+
+            if ($level) {
+                $this->redis->setOption(Redis::OPT_COMPRESSION_LEVEL, $level);
+            }
+        }
+
+        if (!empty($parameters['prefix'])) {
+            if (defined('\Redis::SCAN_PREFIX')) {
+                $this->redis->setOption(Redis::OPT_SCAN, Redis::SCAN_PREFIX);
+            }
+            $this->redis->setOption(Redis::OPT_PREFIX, "{$parameters['prefix']}_{$this->blogPrefix}:");
+        }
+    }
+
+    /**
+     * @return false|int
+     */
+    private function validateCompressionLevel(int $level)
+    {
+        $compressionLevel = \filter_var(
+            $level,
+            FILTER_VALIDATE_INT,
+            [
+                'options' => [
+                    'min_range' => 1,
+                    'max_range' => 9,
+                ],
+            ]
+        );
+
+        if (!$compressionLevel) {
+            return false;
+        }
+
+        return (int) $compressionLevel;
+    }
+
+    /**
      * Is Redis available?
      */
     public function redisStatus(): bool
@@ -257,8 +281,6 @@ class RedisAdapter
 
     /**
      * Returns the Redis instance.
-     *
-     * @return \Redis
      */
     public function redisInstance(): Redis
     {
@@ -544,31 +566,18 @@ class RedisAdapter
      */
     public function stats(): void
     {
-        ?>
-
-        <p>
-            <strong>Redis Status:</strong> <?php
-            echo $this->redisStatus() ? 'Connected' : 'Not Connected'; ?><br/>
-            <strong>Redis Client:</strong> <?php
-            echo $this->redisClient; ?><br/>
-            <strong>Cache Hits:</strong> <?php
-            echo $this->cacheHits; ?><br/>
-            <strong>Cache Misses:</strong> <?php
-            echo $this->cacheMisses; ?>
-        </p>
-
-        <ul>
-        <?php
-        foreach ($this->cache as $group => $cache) { ?>
-            <li><?php
-                \printf(
-            '%s - %sk',
-            \strip_tags($group),
-            \number_format(\strlen(\serialize($cache)) / 1024, 2)
-        ); ?></li>
-            <?php
-        } ?>
-        </ul><?php
+        printf(
+            '<p>
+<strong>Redis Status:</strong> %s <br/>
+<strong>Redis Client:</strong> %s <br/>
+<strong>Cache Hits:</strong> %s <br/>
+<strong>Cache Misses:</strong> %s <br/>
+</p>',
+            esc_attr($this->redisStatus() ? 'Connected' : 'Not Connected'),
+            esc_attr($this->redisClient),
+            esc_attr((string) $this->cacheHits),
+            esc_attr((string) $this->cacheMisses)
+        );
     }
 
     /**
