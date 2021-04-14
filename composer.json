@@ -18,7 +18,6 @@
   },
   "require": {
     "php": ">=7.1",
-    "ext-ctype": "*",
     "ext-redis": "*",
     "composer/installers": "^1",
     "jazzman/wp-app-config": "^2.1",
