@@ -13,16 +13,9 @@ class RedisAdapter
     /**
      * Holds the non-Redis objects.
      *
-     * @var mixed[]
+     * @var array
      */
     private $cache = [];
-
-    /**
-     * Name of the used Redis client.
-     *
-     * @var string
-     */
-    private $redisClient;
 
     /**
      * List of global groups.
@@ -89,18 +82,24 @@ class RedisAdapter
     private $redis;
 
     /**
-     * The Redis server version.
-     *
-     * @var null|string
-     */
-    private $redisVersion;
-
-    /**
      * Track if Redis is available.
      *
      * @var bool
      */
     private $redisConnected = false;
+
+    /**
+     * @var array<string,string|int|null>
+     */
+    private $redisParameters = [
+        'scheme' => 'tcp',
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'timeout' => 5,
+        'read_timeout' => 5,
+        'retry_interval' => null,
+        'compression_level' => 5,
+    ];
 
     public function __construct()
     {
@@ -108,33 +107,27 @@ class RedisAdapter
 
         // Assign global and blog prefixes for use with keys
         if (function_exists('is_multisite')) {
-            $this->global_prefix = (is_multisite() || (defined('CUSTOM_USER_TABLE') && defined(
-                'CUSTOM_USER_META_TABLE'
-            ))) ? '' : $table_prefix;
-            $this->blogPrefix = (is_multisite() ? $blog_id : $table_prefix);
+            $is_multisite = is_multisite();
+            $custom_user_table = defined('CUSTOM_USER_TABLE') && defined('CUSTOM_USER_META_TABLE');
+
+            $this->global_prefix = $is_multisite || $custom_user_table ? '' : $table_prefix;
+
+            $this->blogPrefix = $is_multisite ? $blog_id : $table_prefix;
         }
 
         if (defined('WP_REDIS_IGNORED_GROUPS') && \is_array(WP_REDIS_IGNORED_GROUPS)) {
             $this->ignoredGroups = WP_REDIS_IGNORED_GROUPS;
         }
 
+        $this->initRedisParameters();
+
         $this->initRedis();
     }
 
-    private function initRedis(): void
+    private function initRedisParameters(): void
     {
-        $parameters = [
-            'scheme' => 'tcp',
-            'host' => '127.0.0.1',
-            'port' => 6379,
-            'timeout' => 5,
-            'read_timeout' => 5,
-            'retry_interval' => null,
-            'compression_level' => 5,
-        ];
-
         if (defined('DB_NAME')) {
-            $parameters['prefix'] = DB_NAME;
+            $this->redisParameters['prefix'] = DB_NAME;
         }
 
         $settings = [
@@ -155,53 +148,27 @@ class RedisAdapter
             $constant = \sprintf('WP_REDIS_%s', \strtoupper($setting));
 
             if (defined($constant)) {
-                $parameters[$setting] = \constant($constant);
+                $this->redisParameters[$setting] = \constant($constant);
             }
         }
 
+        if (isset($this->redisParameters['database']) && self::validateInt($this->redisParameters['database'],1,16)) {
+            $this->redisParameters['database'] = (int) $this->redisParameters['database'];
+        }
+
+        $this->redisParameters['version'] = (string) \phpversion('redis');
+    }
+
+    private function initRedis(): void
+    {
         try {
-            $version = (string) \phpversion('redis');
-
-            $this->redisClient = \sprintf('PhpRedis (v%s)', $version);
-
             $this->redis = new Redis();
 
-            $connectionArgs = [
-                $parameters['host'],
-                $parameters['port'],
-                $parameters['timeout'],
-                null,
-                $parameters['retry_interval'],
-            ];
+            $this->makeConnection();
 
-            if (0 === \strcasecmp('tls', $parameters['scheme'])) {
-                $connectionArgs[0] = \sprintf(
-                    '%s://%s',
-                    $parameters['scheme'],
-                    \str_replace('tls://', '', $parameters['host'])
-                );
-            }
-
-            if (0 === \strcasecmp('unix', $parameters['scheme'])) {
-                $connectionArgs[0] = $parameters['path'];
-                $connectionArgs[1] = null;
-            }
-
-            if (version_compare($version, '3.1.3', '>=')) {
-                $connectionArgs[] = $parameters['read_timeout'];
-            }
-
-            \call_user_func_array([$this->redis, 'connect'], $connectionArgs);
-
-            $this->setRedisOption($parameters);
+            $this->setRedisOption();
 
             $this->redis->ping();
-
-            $info = $this->redis->info();
-
-            if (isset($info['redis_version'])) {
-                $this->redisVersion = $info['redis_version'];
-            }
 
             $this->redisConnected = true;
         } catch (Exception $exception) {
@@ -209,21 +176,44 @@ class RedisAdapter
         }
     }
 
-    /**
-     * @param mixed $parameters
-     */
-    private function setRedisOption(array $parameters): void
+    private function makeConnection(): void
     {
-        if (isset($parameters['password'])) {
-            $this->redis->auth($parameters['password']);
+        $connectionArgs = [
+            $this->redisParameters['host'],
+            $this->redisParameters['port'],
+            $this->redisParameters['timeout'],
+            null,
+            $this->redisParameters['retry_interval'],
+        ];
+
+        if (0 === \strcasecmp('tls', (string)$this->redisParameters['scheme'])) {
+            $connectionArgs[0] = \sprintf(
+                '%s://%s',
+                $this->redisParameters['scheme'],
+                \str_replace('tls://', '', (string)$this->redisParameters['host'])
+            );
         }
 
-        if (isset($parameters['database'])) {
-            if (\ctype_digit($parameters['database'])) {
-                $parameters['database'] = (int) ($parameters['database']);
-            }
+        if (0 === \strcasecmp('unix', (string)$this->redisParameters['scheme'])) {
+            $connectionArgs[0] = $this->redisParameters['path'];
+            $connectionArgs[1] = null;
+        }
 
-            $this->redis->select($parameters['database']);
+        if (isset($this->redisParameters['read_timeout']) && version_compare((string)$this->redisParameters['version'], '3.1.3', '>=')) {
+            $connectionArgs[] = $this->redisParameters['read_timeout'];
+        }
+
+        \call_user_func_array([$this->redis, 'connect'], $connectionArgs);
+    }
+
+    private function setRedisOption(): void
+    {
+        if (isset($this->redisParameters['password'])) {
+            $this->redis->auth((string)$this->redisParameters['password']);
+        }
+
+        if (isset($this->redisParameters['database'])) {
+            $this->redis->select((int)$this->redisParameters['database']);
         }
 
         if (defined('Redis::SERIALIZER_IGBINARY')) {
@@ -233,46 +223,50 @@ class RedisAdapter
         if (defined('Redis::COMPRESSION_LZF')) {
             $this->redis->setOption(Redis::OPT_COMPRESSION, Redis::COMPRESSION_LZF);
 
-            $level = $this->validateCompressionLevel($parameters['compression_level']);
+            $level = self::validateInt($this->redisParameters['compression_level'], 1);
 
             if ($level) {
                 $this->redis->setOption(Redis::OPT_COMPRESSION_LEVEL, $level);
             }
         }
 
-        if (!empty($parameters['prefix'])) {
+        if (!empty($this->redisParameters['prefix'])) {
             if (defined('\Redis::SCAN_PREFIX')) {
                 $this->redis->setOption(Redis::OPT_SCAN, Redis::SCAN_PREFIX);
             }
-            $this->redis->setOption(Redis::OPT_PREFIX, "{$parameters['prefix']}_{$this->blogPrefix}:");
+            $this->redis->setOption(Redis::OPT_PREFIX, "{$this->redisParameters['prefix']}:");
         }
     }
 
     /**
+     * @param  mixed  $number
+     * @param  int  $minRange
+     * @param  int|null  $maxRange
+     *
      * @return false|int
      */
-    private function validateCompressionLevel(int $level)
+    private static function validateInt($number, int $minRange = 0, int $maxRange = null)
     {
-        $compressionLevel = \filter_var(
-            $level,
-            FILTER_VALIDATE_INT,
-            [
-                'options' => [
-                    'min_range' => 1,
-                    'max_range' => 9,
-                ],
-            ]
-        );
+        $options = [
+            'min_range' => $minRange,
+        ];
 
-        if (!$compressionLevel) {
-            return false;
+        if (null !== $maxRange) {
+            $options['max_range'] = $maxRange;
         }
 
-        return (int) $compressionLevel;
+        return \filter_var(
+            $number,
+            FILTER_VALIDATE_INT,
+            [
+                'options'=>$options,
+            ]
+        );
     }
 
     /**
      * Is Redis available?
+     * @return bool
      */
     public function redisStatus(): bool
     {
@@ -281,18 +275,11 @@ class RedisAdapter
 
     /**
      * Returns the Redis instance.
+     * @return \Redis
      */
     public function redisInstance(): Redis
     {
         return $this->redis;
-    }
-
-    /**
-     * Returns the Redis server version.
-     */
-    public function redisVersion(): ?string
-    {
-        return $this->redisVersion;
     }
 
     /**
@@ -342,7 +329,7 @@ class RedisAdapter
     public function delete(string $key, string $group = 'default')
     {
         $result = false;
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         if (isset($this->cache[$key])) {
             unset($this->cache[$key]);
@@ -410,7 +397,7 @@ class RedisAdapter
      */
     public function get(string $key, string $group = 'default', bool $force = false, &$found = null)
     {
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         if (isset($this->cache[$key]) && !$force) {
             $found = true;
@@ -462,11 +449,11 @@ class RedisAdapter
     public function set(string $key, $value, string $group = 'default', int $expiration = 0): bool
     {
         $result = true;
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         // save if group not excluded from redis and redis is up
         if (!$this->isIgnoredGroup($group) && $this->redisStatus()) {
-            $expiration = $this->validateExpiration($expiration);
+            $expiration = self::validateInt($expiration);
 
             try {
                 $result = $expiration ?
@@ -490,11 +477,15 @@ class RedisAdapter
     /**
      * Increment a Redis counter by the amount specified.
      *
+     * @param  string  $key
+     * @param  int  $offset
+     * @param  string  $group
+     *
      * @return bool|int
      */
     public function increment(string $key, int $offset = 1, string $group = 'default')
     {
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         // If group is a non-Redis group, save to internal cache, not Redis
         if ($this->isIgnoredGroup($group) || !$this->redisStatus()) {
@@ -520,23 +511,16 @@ class RedisAdapter
     }
 
     /**
-     * Alias of `increment()`.
-     *
-     * @return bool|int
-     */
-    public function incr(string $key, int $offset = 1, string $group = 'default')
-    {
-        return $this->increment($key, $offset, $group);
-    }
-
-    /**
      * Decrement a Redis counter by the amount specified.
      *
+     * @param  string  $key
+     * @param  int  $offset
+     * @param  string  $group
      * @return bool|int
      */
     public function decrement(string $key, int $offset = 1, string $group = 'default')
     {
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         // If group is a non-Redis group, save to internal cache, not Redis
         if ($this->isIgnoredGroup($group) || !$this->redisStatus()) {
@@ -569,12 +553,12 @@ class RedisAdapter
         printf(
             '<p>
 <strong>Redis Status:</strong> %s <br/>
-<strong>Redis Client:</strong> %s <br/>
+<strong>Redis Client:</strong> PhpRedis (v%s) <br/>
 <strong>Cache Hits:</strong> %s <br/>
 <strong>Cache Misses:</strong> %s <br/>
 </p>',
             esc_attr($this->redisStatus() ? 'Connected' : 'Not Connected'),
-            esc_attr($this->redisClient),
+            esc_attr((string)$this->redisParameters['version']),
             esc_attr((string) $this->cacheHits),
             esc_attr((string) $this->cacheMisses)
         );
@@ -583,18 +567,21 @@ class RedisAdapter
     /**
      * Builds a key for the cached object using the prefix, group and key.
      *
-     * @param string $key   the key under which to store the value
-     * @param string $group the group value appended to the $key
+     * @param  string  $key  the key under which to store the value
+     * @param  string  $group  the group value appended to the $key
+     * @return string
      */
-    private static function buildKey(string $key, string $group = 'default'): string
+    private function buildKey(string $key, string $group = 'default'): string
     {
         if (empty($group)) {
             $group = 'default';
         }
 
-        $key = self::sanitizeKey($key);
-
-        return $group.':'.$key;
+        return implode(':', array_filter([
+            !empty($this->blogPrefix) ? $this->blogPrefix : false,
+            $group,
+            self::sanitizeKey($key),
+        ]));
     }
 
     private static function sanitizeKey(string $key): string
@@ -639,6 +626,8 @@ class RedisAdapter
 
     /**
      * In multisite, switch blog prefix when switching blogs.
+     * @param  int  $blogId
+     * @return bool
      */
     public function switchToBlog(int $blogId): bool
     {
@@ -699,7 +688,7 @@ class RedisAdapter
         }
 
         $result = true;
-        $key = self::buildKey($key, $group);
+        $key = $this->buildKey($key, $group);
 
         // save if group not excluded and redis is up
         if (!$this->isIgnoredGroup($group) && $this->redisStatus()) {
@@ -710,7 +699,7 @@ class RedisAdapter
                     return false;
                 }
 
-                $expiration = $this->validateExpiration($expiration);
+                $expiration = self::validateInt($expiration);
 
                 $result = $expiration ?
                     $this->redis->setex($key, $expiration, $value) :
@@ -738,31 +727,12 @@ class RedisAdapter
     /**
      * Checks if the given group is part the ignored group array.
      *
-     * @param string $group Name of the group to check
+     * @param  string  $group  Name of the group to check
+     * @return bool
      */
     private function isIgnoredGroup(string $group): bool
     {
         return \in_array($group, $this->ignoredGroups, true);
-    }
-
-    /**
-     * Wrapper to validate the cache keys expiration value.
-     *
-     * @param mixed $expiration Incoming expiration value (whatever it is)
-     */
-    private function validateExpiration($expiration): int
-    {
-        $expiration = \is_int($expiration) || \ctype_digit($expiration) ? (int) $expiration : 0;
-
-        if (defined('WP_REDIS_MAXTTL')) {
-            $max = (int) WP_REDIS_MAXTTL;
-
-            if (0 === $expiration || $expiration > $max) {
-                $expiration = $max;
-            }
-        }
-
-        return $expiration;
     }
 
     /**
