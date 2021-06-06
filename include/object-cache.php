@@ -4,7 +4,7 @@
 Plugin Name: WP Object Cache Drop-In
 Plugin URI: https://github.com/Jazz-Man/wp-object-cache
 Description: Redis, Memcached or Apcu backend for the WP Object Cache
-Version: v2.1.1
+Version: v2.1.2
 Author: Vasyl Sokolyk
 */
 
