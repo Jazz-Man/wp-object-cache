@@ -103,12 +103,12 @@ function wp_cache_set(string $key, $value = null, string $group = 'default', int
 
 /**
  * Switch blog prefix, which changes the cache that is accessed.
- * @param  int  $blogId
+ * @param  int|string  $blogId
  * @return bool
  */
-function wp_cache_switch_to_blog(int $blogId): bool
+function wp_cache_switch_to_blog($blogId): bool
 {
-    return wp_object_cache()->switchToBlog($blogId);
+    return wp_object_cache()->switchToBlog((int) $blogId);
 }
 
 /**

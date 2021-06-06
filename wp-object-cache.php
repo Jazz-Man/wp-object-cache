@@ -6,7 +6,8 @@ Description: Redis, Memcached or Apcu backend for the WP Object Cache
 Version: v2.0
 Plugin URI: https://github.com/Jazz-Man/wp-object-cache
 Author: Vasyl Sokolyk
-
+Text Domain: wp-object-cache
+Domain Path: /languages
 */
 
 /**
@@ -69,16 +70,17 @@ class WPObjectCache
 
         $adminMenu = $isMultisite ? 'network_admin_menu' : 'admin_menu';
 
-        $screen = "settings_page_$this->pageSlug";
+        $screen = "settings_page_{$this->pageSlug}";
 
         $this->baseOptionsPage = $isMultisite ? 'settings.php' : 'options-general.php';
 
-        $this->page = "$this->baseOptionsPage?page=$this->pageSlug";
+        $this->page = "{$this->baseOptionsPage}?page={$this->pageSlug}";
 
         add_action($adminMenu, [$this, 'addAdminMenuPage']);
+        add_action('plugins_loaded', [$this,'loadPluginTextdomain']);
 
-        add_action("load-$screen", [$this, 'doAdminActions']);
-        add_action("load-$screen", [$this, 'addAdminPageNotices']);
+        add_action("load-{$screen}", [$this, 'doAdminActions']);
+        add_action("load-{$screen}", [$this, 'addAdminPageNotices']);
 
         add_action('admin_notices', [$this, 'showAdminNotices']);
 
@@ -86,13 +88,18 @@ class WPObjectCache
         add_filter($filter, [$this, 'addPluginActionsLinks']);
     }
 
+    public function loadPluginTextdomain()
+    {
+        load_plugin_textdomain('wp-object-cache', false, dirname(plugin_basename(__FILE__)) . '/languages/');
+    }
+
     public function addAdminMenuPage(): void
     {
         // add sub-page to "Settings"
         add_submenu_page(
             $this->baseOptionsPage,
-            'WP Object Cache',
-            'WP Object Cache',
+            __('WP Object Cache', 'wp-object-cache'),
+            __('WP Object Cache', 'wp-object-cache'),
             $this->capability,
             $this->pageSlug,
             [$this, 'showAdminPage']
@@ -107,10 +114,7 @@ class WPObjectCache
         }
 
         if ($this->objectCacheDropinExists()) {
-            $url = wp_nonce_url(
-                network_admin_url(add_query_arg('action', 'update-dropin', $this->page)),
-                'update-dropin'
-            );
+            $url = $this->getNonceUrl('update-dropin');
 
             if ($this->validateObjectCacheDropin()) {
                 $dropin = get_plugin_data($this->wpDropinFile);
@@ -118,16 +122,19 @@ class WPObjectCache
 
                 if (version_compare($dropin['Version'], $plugin['Version'], '<')) {
                     $message = sprintf(
-                        __(
+                        esc_html__(
                             '<strong>The object cache drop-in is outdated.</strong> Please <a href="%s">update it now</a>.',
-                            $this->pageSlug
+                            'wp-object-cache'
                         ),
                         $url
                     );
                 }
             } else {
                 $message = sprintf(
-                    __('<strong>An unknown object cache drop-in was found</strong>. To use WP Object Cache , <a href="%s">please replace it now</a>.', $this->pageSlug),
+                    esc_html__(
+                        '<strong>An unknown object cache drop-in was found</strong>. To use WP Object Cache , <a href="%s">please replace it now</a>.',
+                        'wp-object-cache'
+                    ),
                     $url
                 );
             }
@@ -136,21 +143,49 @@ class WPObjectCache
                 $this->printNotice($message);
             }
         } else {
-            $enableUrl = wp_nonce_url(
-                network_admin_url(add_query_arg('action', 'enable-cache', $this->page)),
-                'enable-cache'
-            );
+            $enableUrl = $this->getNonceUrl('enable-cache');
 
             $message = sprintf(
-                __(
+                esc_html__(
                     '<strong>WP Object Cache is not used.</strong> To use WP Object Cache , <a href="%s">please enable it now</a>.',
-                    $this->pageSlug
+                    'wp-object-cache'
                 ),
                 $enableUrl
             );
 
             $this->printNotice($message);
         }
+    }
+
+    private function objectCacheDropinExists(): bool
+    {
+        return is_readable($this->wpDropinFile);
+    }
+
+    private function getNonceUrl(string $action): string
+    {
+        return wp_nonce_url(
+            network_admin_url(add_query_arg('action', $action, $this->page)),
+            $action
+        );
+    }
+
+    private function validateObjectCacheDropin(): bool
+    {
+        if (!$this->objectCacheDropinExists()) {
+            return false;
+        }
+
+        $dropin = get_plugin_data($this->wpDropinFile);
+
+        $plugin = get_plugin_data($this->dropinFile);
+
+        return $dropin['PluginURI'] === $plugin['PluginURI'];
+    }
+
+    private function printNotice(string $message): void
+    {
+        printf('<div class="update-nag notice notice-warning">%s</div>', $message);
     }
 
     /**
@@ -164,40 +199,80 @@ class WPObjectCache
             sprintf(
                 '<a href="%s">%s</a>',
                 esc_url(network_admin_url($this->page)),
-                esc_attr__('Settings', $this->pageSlug)
+                esc_attr($this->getLinkLabel('settings'))
             ),
         ];
 
         if ($this->isRedisEnabled()) {
-            $links[] = $this->getLink('flush-cache', 'Flush Cache');
+            $links[] = $this->getLink();
         }
         if (!$this->objectCacheDropinExists()) {
-            $links[] = $this->getLink('enable-cache', 'Enable Cache');
+            $links[] = $this->getLink('enable-cache');
         }
 
         if ($this->validateObjectCacheDropin()) {
-            $links[] = $this->getLink('disable-cache', 'Disable Cache');
+            $links[] = $this->getLink('disable-cache');
         }
 
         return array_merge($links, $actions);
     }
 
+    private function getLinkLabel(string $action = 'enable-cache')
+    {
+        switch ($action) {
+            default:
+            case 'enable-cache':
+                $label = __('Enable Object Cache', 'wp-object-cache');
+
+                break;
+
+            case 'disable-cache':
+                $label = __('Disable Object Cache', 'wp-object-cache');
+
+                break;
+
+            case 'flush-cache':
+                $label = __('Flush Cache', 'wp-object-cache');
+
+                break;
+
+            case 'settings':
+                $label = __('Settings', 'wp-object-cache');
+
+                break;
+        }
+
+        return $label;
+    }
+
+    private function isRedisEnabled(): bool
+    {
+        if ($this->validateObjectCacheDropin()) {
+            return wp_object_redis_status();
+        }
+
+        return false;
+    }
+
+    private function getLink(string $action = 'flush-cache', array $linkAttr = []): string
+    {
+        return sprintf(
+            '<a href="%s" %s>%s</a>',
+            $this->getNonceUrl($action),
+            app_add_attr_to_el($linkAttr),
+            esc_html($this->getLinkLabel($action))
+        );
+    }
+
     public function showAdminPage(): void
     {
-        $action = filter_input(INPUT_GET, 'action');
-        $nonce = filter_input(INPUT_GET, '_wpnonce');
+        $request = $this->verifyNonceFromRequest();
 
         // request filesystem credentials?
-        if (!empty($action) && !empty($nonce)) {
-            foreach ($this->actions as $name) {
-                // verify nonce
-                if ($action === $name && wp_verify_nonce($nonce, $action)) {
-                    $url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
-
-                    if (false === $this->initFilesystem($url)) {
-                        return; // request filesystem credentials
-                    }
-                }
+        if (!empty($request)) {
+            $url = $this->getNonceUrl($request['action']);
+            if (false === $this->initFilesystem($url)) {
+                return; // request filesystem credentials
             }
         }
 
@@ -207,70 +282,91 @@ class WPObjectCache
 
         $redis = wp_object_cache_instance();
 
+        $adminLinkAttr = [
+            'class' => 'button button-primary button-large',
+        ];
+
         $content = sprintf(
             '<p class="submit">%s<br/>%s<br/>%s</p>',
-            $this->isRedisEnabled() ?
-                $this->buildAdminLink(
-                    'Flush Cache',
-                    wp_nonce_url(network_admin_url(add_query_arg('action', 'flush-cache', $this->page)), 'flush-cache')
-                ) :
-                '',
-            !$this->objectCacheDropinExists() ?
-                $this->buildAdminLink(
-                    'Enable Object Cache',
-                    wp_nonce_url(
-                        network_admin_url(add_query_arg('action', 'enable-cache', $this->page)),
-                        'enable-cache'
-                    )
-                ) :
-                '',
-            $this->validateObjectCacheDropin() ?
-                $this->buildAdminLink(
-                    'Disable Object Cache',
-                    wp_nonce_url(
-                        network_admin_url(add_query_arg('action', 'disable-cache', $this->page)),
-                        'disable-cache'
-                    )
-                ) : ''
+            $this->isRedisEnabled() ? $this->getLink('flush-cache', $adminLinkAttr) : '',
+            !$this->objectCacheDropinExists() ? $this->getLink('enable-cache', $adminLinkAttr) : '',
+            $this->validateObjectCacheDropin() ? $this->getLink('disable-cache', $adminLinkAttr) : ''
         );
 
-        $content .= $this->buildFormTable('Redis COMANDSTATS', $redis->info('COMANDSTATS'));
-        $content .= $this->buildFormTable('Redis KEYSPACE', $redis->info('KEYSPACE'));
-        $content .= $this->buildFormTable('Redis CLASTER', $redis->info('CLASTER'));
-        $content .= $this->buildFormTable('Redis CPU', $redis->info('CPU'));
-        $content .= $this->buildFormTable('Redis REPLICATION', $redis->info('REPLICATION'));
-        $content .= $this->buildFormTable('Redis PERSISTENCE', $redis->info('PERSISTENCE'));
-        $content .= $this->buildFormTable('Redis MEMORY', $redis->info('MEMORY'));
-        $content .= $this->buildFormTable('Redis CLIENTS', $redis->info('CLIENTS'));
-        $content .= $this->buildFormTable('Redis SERVER', $redis->info('SERVER'));
-        $content .= $this->buildFormTable('Redis STATS', $redis->info('STATS'));
+        $infoCommands = [
+            'COMANDSTATS',
+            'KEYSPACE',
+            'CLASTER',
+            'CPU',
+            'REPLICATION',
+            'PERSISTENCE',
+            'MEMORY',
+            'CLIENTS',
+            'SERVER',
+            'STATS',
+        ];
+
+        foreach ($infoCommands as $command) {
+            $content .= $this->buildFormTable("Redis {$command}", $redis->info($command));
+        }
 
         $this->buildAdminWrapper($content);
     }
 
-    private function printNotice(string $message): void
+    /**
+     * @return array|false
+     */
+    private function verifyNonceFromRequest()
     {
-        printf('<div class="update-nag notice notice-warning">%s</div>', $message);
-    }
+        $actionsList = $this->actions;
 
-    private function buildAdminLink(string $label, string $link): string
-    {
-        return sprintf(
-            '<a href="%s" class="button button-primary button-large">%s</a>',
-            $link,
-            esc_html($label)
+        $request = filter_input_array(
+            INPUT_GET,
+            [
+                'action' => [
+                    'filter' => FILTER_CALLBACK,
+                    'options' => function ($action) use ($actionsList) {
+                        return in_array((string) $action, $actionsList, true) ? $action : false;
+                    },
+                ],
+                '_wpnonce' => [
+                    'filter' => FILTER_DEFAULT,
+                    'flags' => FILTER_REQUIRE_SCALAR,
+                ],
+            ]
         );
+
+        return wp_verify_nonce($request['_wpnonce'], $request['action']) ? $request : false;
     }
 
-    private function buildAdminWrapper(string $content): void
+    private function initFilesystem(string $url, bool $silent = false): bool
     {
-        printf(
-            '<div class="wrap"><h1>%s</h1><div class="section-overview">%s</div></div>',
-            esc_html__('WP Object Cache', $this->pageSlug),
-            $content
-        );
-    }
+        if ($silent) {
+            ob_start();
+        }
 
+        $credentials = request_filesystem_credentials($url);
+
+        if (false === $credentials) {
+            if ($silent) {
+                ob_end_clean();
+            }
+
+            return false;
+        }
+
+        if (!WP_Filesystem($credentials)) {
+            request_filesystem_credentials($url);
+
+            if ($silent) {
+                ob_end_clean();
+            }
+
+            return false;
+        }
+
+        return true;
+    }
 
     private function buildFormTable(string $label, array $info): string
     {
@@ -293,78 +389,13 @@ class WPObjectCache
         );
     }
 
-    /**
-     * @param  string  $url
-     * @param  bool  $silent
-     *
-     * @return bool
-     */
-    private function initFilesystem(string $url, bool $silent = false): bool
+    private function buildAdminWrapper(string $content): void
     {
-        if ($silent) {
-            ob_start();
-        }
-
-        if (false === ($credentials = request_filesystem_credentials($url))) {
-            if ($silent) {
-                ob_end_clean();
-            }
-
-            return false;
-        }
-
-        if (!WP_Filesystem($credentials)) {
-            request_filesystem_credentials($url);
-
-            if ($silent) {
-                ob_end_clean();
-            }
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private function objectCacheDropinExists(): bool
-    {
-        return is_readable($this->wpDropinFile);
-    }
-
-    private function validateObjectCacheDropin(): bool
-    {
-        if (!$this->objectCacheDropinExists()) {
-            return false;
-        }
-
-        $dropin = get_plugin_data($this->wpDropinFile);
-
-        $plugin = get_plugin_data($this->dropinFile);
-
-        return $dropin['PluginURI'] === $plugin['PluginURI'];
-    }
-
-    private function getLink(string $action = 'flush-cache', string $label = 'Flush Cache'): string
-    {
-        $action = esc_attr($action);
-
-        return sprintf(
-            '<a href="%s">%s</a>',
-            wp_nonce_url(
-                network_admin_url(add_query_arg('action', $action, $this->page)),
-                $action
-            ),
-            esc_html__(sanitize_text_field($label), $this->pageSlug)
+        printf(
+            '<div class="wrap"><h1>%s</h1><div class="section-overview">%s</div></div>',
+            esc_html__('WP Object Cache', 'wp-object-cache'),
+            $content
         );
-    }
-
-    private function isRedisEnabled(): bool
-    {
-        if ($this->validateObjectCacheDropin()) {
-            return wp_object_redis_status();
-        }
-
-        return false;
     }
 
     public function doAdminActions()
@@ -373,52 +404,42 @@ class WPObjectCache
 
         global $wp_filesystem;
 
-        $action = filter_input(INPUT_GET, 'action');
-        $nonce = filter_input(INPUT_GET, '_wpnonce');
+        $request = $this->verifyNonceFromRequest();
 
-        if (!empty($action) && !empty($nonce)) {
-            // verify nonce
-            foreach ($this->actions as $name) {
-                if ($action === $name && !wp_verify_nonce($nonce, $action)) {
-                    return;
+        if (!empty($request)) {
+            $url = $this->getNonceUrl($request['action']);
+
+            if ('flush-cache' === $request['action']) {
+                $message = wp_cache_flush() ? 'cache-flushed' : 'flush-cache-failed';
+            }
+
+            if ($this->initFilesystem($url, true)) {
+                switch ($request['action']) {
+                    case 'enable-cache':
+                        $result = $wp_filesystem->copy($this->dropinFile, $this->wpDropinFile, true);
+                        $message = $result ? 'cache-enabled' : 'enable-cache-failed';
+
+                        break;
+
+                    case 'disable-cache':
+                        $result = $wp_filesystem->delete($this->wpDropinFile);
+                        $message = $result ? 'cache-disabled' : 'disable-cache-failed';
+
+                        break;
+
+                    case 'update-dropin':
+                        $result = $wp_filesystem->copy($this->dropinFile, $this->wpDropinFile, true);
+                        $message = $result ? 'dropin-updated' : 'update-dropin-failed';
+
+                        break;
                 }
             }
 
-            if (in_array($action, $this->actions)) {
-                $url = wp_nonce_url(network_admin_url(add_query_arg('action', $action, $this->page)), $action);
+            // redirect if status `$message` was set
+            if (isset($message)) {
+                wp_safe_redirect(network_admin_url(add_query_arg('message', $message, $this->page)));
 
-                if ('flush-cache' === $action) {
-                    $message = wp_cache_flush() ? 'cache-flushed' : 'flush-cache-failed';
-                }
-
-                if ($this->initFilesystem($url, true)) {
-                    switch ($action) {
-                        case 'enable-cache':
-                            $result = $wp_filesystem->copy($this->dropinFile, $this->wpDropinFile, true);
-                            $message = $result ? 'cache-enabled' : 'enable-cache-failed';
-
-                            break;
-
-                        case 'disable-cache':
-                            $result = $wp_filesystem->delete($this->wpDropinFile);
-                            $message = $result ? 'cache-disabled' : 'disable-cache-failed';
-
-                            break;
-
-                        case 'update-dropin':
-                            $result = $wp_filesystem->copy($this->dropinFile, $this->wpDropinFile, true);
-                            $message = $result ? 'dropin-updated' : 'update-dropin-failed';
-
-                            break;
-                    }
-                }
-
-                // redirect if status `$message` was set
-                if (isset($message)) {
-                    wp_safe_redirect(network_admin_url(add_query_arg('message', $message, $this->page)));
-
-                    exit(0);
-                }
+                exit(0);
             }
         }
     }
@@ -427,7 +448,7 @@ class WPObjectCache
     {
         // show PHP version warning
         if (PHP_VERSION_ID < 50400) {
-            add_settings_error('', $this->pageSlug, __('This plugin requires PHP 5.4 or greater.', $this->pageSlug));
+            add_settings_error('', $this->pageSlug, __('This plugin requires PHP 5.4 or greater.', 'wp-object-cache'));
         }
 
         $message_code = filter_input(INPUT_GET, 'message');
@@ -440,42 +461,42 @@ class WPObjectCache
         if (!empty($message_code)) {
             switch ($message_code) {
                 case 'cache-enabled':
-                    $message = __('Object cache enabled.', $this->pageSlug);
+                    $message = __('Object cache enabled.', 'wp-object-cache');
 
                     break;
 
                 case 'enable-cache-failed':
-                    $error = __('Object cache could not be enabled.', $this->pageSlug);
+                    $error = __('Object cache could not be enabled.', 'wp-object-cache');
 
                     break;
 
                 case 'cache-disabled':
-                    $message = __('Object cache disabled.', $this->pageSlug);
+                    $message = __('Object cache disabled.', 'wp-object-cache');
 
                     break;
 
                 case 'disable-cache-failed':
-                    $error = __('Object cache could not be disabled.', $this->pageSlug);
+                    $error = __('Object cache could not be disabled.', 'wp-object-cache');
 
                     break;
 
                 case 'cache-flushed':
-                    $message = __('Object cache flushed.', $this->pageSlug);
+                    $message = __('Object cache flushed.', 'wp-object-cache');
 
                     break;
 
                 case 'flush-cache-failed':
-                    $error = __('Object cache could not be flushed.', $this->pageSlug);
+                    $error = __('Object cache could not be flushed.', 'wp-object-cache');
 
                     break;
 
                 case 'dropin-updated':
-                    $message = __('Updated object cache drop-in and enabled Redis object cache.', $this->pageSlug);
+                    $message = __('Updated object cache drop-in and enabled Redis object cache.', 'wp-object-cache');
 
                     break;
 
                 case 'update-dropin-failed':
-                    $error = __('Object cache drop-in could not be updated.', $this->pageSlug);
+                    $error = __('Object cache drop-in could not be updated.', 'wp-object-cache');
 
                     break;
             }
