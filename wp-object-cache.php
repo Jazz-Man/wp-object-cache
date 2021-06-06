@@ -122,7 +122,7 @@ class WPObjectCache
 
                 if (version_compare($dropin['Version'], $plugin['Version'], '<')) {
                     $message = sprintf(
-                        esc_html__(
+                        __(
                             '<strong>The object cache drop-in is outdated.</strong> Please <a href="%s">update it now</a>.',
                             'wp-object-cache'
                         ),
@@ -131,7 +131,7 @@ class WPObjectCache
                 }
             } else {
                 $message = sprintf(
-                    esc_html__(
+                    __(
                         '<strong>An unknown object cache drop-in was found</strong>. To use WP Object Cache , <a href="%s">please replace it now</a>.',
                         'wp-object-cache'
                     ),
@@ -146,7 +146,7 @@ class WPObjectCache
             $enableUrl = $this->getNonceUrl('enable-cache');
 
             $message = sprintf(
-                esc_html__(
+                __(
                     '<strong>WP Object Cache is not used.</strong> To use WP Object Cache , <a href="%s">please enable it now</a>.',
                     'wp-object-cache'
                 ),
@@ -393,7 +393,7 @@ class WPObjectCache
     {
         printf(
             '<div class="wrap"><h1>%s</h1><div class="section-overview">%s</div></div>',
-            esc_html__('WP Object Cache', 'wp-object-cache'),
+            __('WP Object Cache', 'wp-object-cache'),
             $content
         );
     }
