@@ -1,7 +1,13 @@
 
+2.1.3 / 2021-06-06
+==================
+
+  * update plugin version
+
 2.1.2 / 2021-06-06
 ==================
 
+  * update CHANGELOG.md
   * fix all phpmd style
   * added translation
   * update phpmd rules
