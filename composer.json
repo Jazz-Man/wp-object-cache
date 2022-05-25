@@ -21,7 +21,7 @@
     "ext-redis": "*",
     "composer/installers": "^1",
     "jazzman/wp-app-config": "^2.1",
-    "roots/wordpress": "^5"
+    "roots/wordpress": "^6"
   },
   "require-dev": {
     "roave/security-advisories": "dev-master",
