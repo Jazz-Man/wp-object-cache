@@ -19,7 +19,7 @@
   "require": {
     "php": ">=7.1",
     "ext-redis": "*",
-    "composer/installers": "^1",
+    "composer/installers": "^2",
     "jazzman/wp-app-config": "^2.1",
     "roots/wordpress": "^5"
   },
