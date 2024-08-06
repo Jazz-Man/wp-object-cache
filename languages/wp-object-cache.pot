@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2021-06-06T03:04:52+03:00\n"
+"POT-Creation-Date: 2021-06-06T03:44:54+03:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.4.0\n"
 "X-Domain: wp-object-cache\n"
@@ -19,6 +19,10 @@ msgstr ""
 #: wp-object-cache.php:102
 #: wp-object-cache.php:396
 msgid "WP Object Cache"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://github.com/Jazz-Man/wp-object-cache"
 msgstr ""
 
 #. Description of the plugin
