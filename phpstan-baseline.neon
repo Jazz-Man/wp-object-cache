@@ -36,22 +36,12 @@ parameters:
 			path: wp-object-cache.php
 
 		-
-			message: "#^Method WPObjectCache\\:\\:getLinkLabel\\(\\) has no return type specified\\.$#"
-			count: 1
-			path: wp-object-cache.php
-
-		-
 			message: "#^Method WPObjectCache\\:\\:verifyNonceFromRequest\\(\\) return type has no value type specified in iterable type array\\.$#"
 			count: 1
 			path: wp-object-cache.php
 
 		-
 			message: "#^Parameter \\#1 \\$args of function WP_Filesystem expects array\\|false, array\\|true given\\.$#"
-			count: 1
-			path: wp-object-cache.php
-
-		-
-			message: "#^Parameter \\#1 \\$nonce of function wp_verify_nonce expects string, string\\|false given\\.$#"
 			count: 1
 			path: wp-object-cache.php
 
