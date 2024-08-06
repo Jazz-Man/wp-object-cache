@@ -1,0 +1,76 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Binary operation \"\\+\\=\" between mixed and int results in an error\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Binary operation \"\\-\\=\" between mixed and int results in an error\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Cannot cast mixed to int\\.$#"
+			count: 2
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:delete\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$ignoredGroups \\(array\\<string\\>\\) does not accept array\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Method WPObjectCache\\:\\:buildFormTable\\(\\) has parameter \\$info with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Method WPObjectCache\\:\\:getLink\\(\\) has parameter \\$linkAttr with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Method WPObjectCache\\:\\:getLinkLabel\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Method WPObjectCache\\:\\:verifyNonceFromRequest\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Parameter \\#1 \\$args of function WP_Filesystem expects array\\|false, array\\|true given\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Parameter \\#1 \\$nonce of function wp_verify_nonce expects string, string\\|false given\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Parameter \\#3 \\$message of function add_settings_error expects string, string\\|false given\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Ternary operator condition is always true\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Variable \\$message in isset\\(\\) always exists and is not nullable\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Variable \\$message on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: wp-object-cache.php

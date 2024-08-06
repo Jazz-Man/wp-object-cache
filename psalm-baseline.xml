@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="5.25.0@01a8eb06b9e9cc6cfb6a320bf9fb14331919d505">
+  <file src="src/RedisAdapter.php">
+    <DocblockTypeContradiction>
+      <code><![CDATA[null === $result]]></code>
+    </DocblockTypeContradiction>
+    <ImplicitToStringCast>
+      <code><![CDATA[$exception]]></code>
+    </ImplicitToStringCast>
+    <InvalidArgument>
+      <code><![CDATA[filter_var]]></code>
+    </InvalidArgument>
+    <InvalidArrayOffset>
+      <code><![CDATA[$this->redisParameters['database']]]></code>
+      <code><![CDATA[$this->redisParameters['database']]]></code>
+      <code><![CDATA[$this->redisParameters['password']]]></code>
+      <code><![CDATA[$this->redisParameters['path']]]></code>
+      <code><![CDATA[$this->redisParameters['prefix']]]></code>
+      <code><![CDATA[$this->redisParameters['version']]]></code>
+      <code><![CDATA[$this->redisParameters['version']]]></code>
+    </InvalidArrayOffset>
+    <InvalidCast>
+      <code><![CDATA[$this->redis->get($key)]]></code>
+      <code><![CDATA[$this->redis->get($key)]]></code>
+    </InvalidCast>
+    <InvalidPropertyAssignmentValue>
+      <code><![CDATA[$this->redisParameters]]></code>
+      <code><![CDATA[$this->redisParameters]]></code>
+      <code><![CDATA[$this->redisParameters]]></code>
+    </InvalidPropertyAssignmentValue>
+    <InvalidReturnStatement>
+      <code><![CDATA[$expiration ?
+            $this->redis->setex($key, $expiration, $value) :
+            $this->redis->set($key, $value)]]></code>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$result]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool|int]]></code>
+    </InvalidReturnType>
+    <MixedArgument>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedArgument>
+    <MixedAssignment>
+      <code><![CDATA[$connectionArgs[0]]]></code>
+      <code><![CDATA[$this->blogPrefix]]></code>
+      <code><![CDATA[$this->global_prefix]]></code>
+      <code><![CDATA[$this->ignoredGroups]]></code>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+    <MixedInferredReturnType>
+      <code><![CDATA[bool|int]]></code>
+      <code><![CDATA[bool|int]]></code>
+    </MixedInferredReturnType>
+    <MixedOperand>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedOperand>
+    <MixedPropertyTypeCoercion>
+      <code><![CDATA[$this->redisParameters]]></code>
+      <code><![CDATA[$this->redisParameters]]></code>
+      <code><![CDATA[$this->redisParameters]]></code>
+    </MixedPropertyTypeCoercion>
+    <MixedReturnStatement>
+      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedReturnStatement>
+    <PropertyNotSetInConstructor>
+      <code><![CDATA[$redis]]></code>
+    </PropertyNotSetInConstructor>
+    <RedundantCastGivenDocblockType>
+      <code><![CDATA[(string) $this->redisParameters['host']]]></code>
+      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
+      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
+    </RedundantCastGivenDocblockType>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[$expiration]]></code>
+      <code><![CDATA[$level]]></code>
+      <code><![CDATA[self::validateInt($this->redisParameters['database'], 1, 16)]]></code>
+    </RiskyTruthyFalsyComparison>
+  </file>
+  <file src="wp-object-cache.php">
+    <DocblockTypeContradiction>
+      <code><![CDATA[$error]]></code>
+      <code><![CDATA['error']]></code>
+    </DocblockTypeContradiction>
+    <InvalidNullableReturnType>
+      <code><![CDATA[array|false]]></code>
+    </InvalidNullableReturnType>
+    <MissingClosureParamType>
+      <code><![CDATA[$action]]></code>
+    </MissingClosureParamType>
+    <MissingReturnType>
+      <code><![CDATA[getLinkLabel]]></code>
+    </MissingReturnType>
+    <MixedArgument>
+      <code><![CDATA[$item]]></code>
+      <code><![CDATA[$message]]></code>
+      <code><![CDATA[$redis->info( $command )]]></code>
+      <code><![CDATA[$request['_wpnonce']]]></code>
+      <code><![CDATA[$request['action']]]></code>
+      <code><![CDATA[$request['action']]]></code>
+      <code><![CDATA[$request['action']]]></code>
+      <code><![CDATA[$this->getLinkLabel( $action )]]></code>
+      <code><![CDATA[$this->getLinkLabel( 'settings' )]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$linkAttr]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedAssignment>
+      <code><![CDATA[$item]]></code>
+      <code><![CDATA[$redis]]></code>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$result]]></code>
+    </MixedAssignment>
+    <MixedInferredReturnType>
+      <code><![CDATA[bool]]></code>
+    </MixedInferredReturnType>
+    <MixedMethodCall>
+      <code><![CDATA[copy]]></code>
+      <code><![CDATA[copy]]></code>
+      <code><![CDATA[delete]]></code>
+      <code><![CDATA[delete]]></code>
+      <code><![CDATA[info]]></code>
+    </MixedMethodCall>
+    <MixedReturnStatement>
+      <code><![CDATA[wp_object_redis_status()]]></code>
+    </MixedReturnStatement>
+    <NullableReturnStatement>
+      <code><![CDATA[wp_verify_nonce( $request['_wpnonce'], $request['action'] ) ? $request : false]]></code>
+    </NullableReturnStatement>
+    <PossiblyFalseArgument>
+      <code><![CDATA[$message ?? $error]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$credentials]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyNullArgument>
+      <code><![CDATA[$request['_wpnonce']]]></code>
+      <code><![CDATA[$request['action']]]></code>
+    </PossiblyNullArgument>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$request['_wpnonce']]]></code>
+      <code><![CDATA[$request['action']]]></code>
+    </PossiblyNullArrayAccess>
+    <RedundantConditionGivenDocblockType>
+      <code><![CDATA[$message]]></code>
+      <code><![CDATA[isset( $message )]]></code>
+    </RedundantConditionGivenDocblockType>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[empty( $message_code )]]></code>
+      <code><![CDATA[empty( $request )]]></code>
+      <code><![CDATA[empty( $request )]]></code>
+      <code><![CDATA[wp_verify_nonce( $request['_wpnonce'], $request['action'] )]]></code>
+    </RiskyTruthyFalsyComparison>
+    <UndefinedFunction>
+      <code><![CDATA[wp_object_cache_instance()]]></code>
+      <code><![CDATA[wp_object_redis_status()]]></code>
+    </UndefinedFunction>
+  </file>
+</files>
