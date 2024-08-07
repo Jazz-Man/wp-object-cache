@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <files psalm-version="5.25.0@01a8eb06b9e9cc6cfb6a320bf9fb14331919d505">
+  <file src="include/object-cache.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[wp_object_cache()->decrement($key, $offset, $group)]]></code>
+      <code><![CDATA[wp_object_cache()->increment($key, $offset, $group)]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[bool|int]]></code>
+      <code><![CDATA[bool|int]]></code>
+    </InvalidReturnType>
+  </file>
   <file src="src/RedisAdapter.php">
     <DocblockTypeContradiction>
       <code><![CDATA[null === $result]]></code>
@@ -11,43 +21,60 @@
       <code><![CDATA[filter_var]]></code>
     </InvalidArgument>
     <InvalidCast>
-      <code><![CDATA[$this->redis->get($key)]]></code>
-      <code><![CDATA[$this->redis->get($key)]]></code>
+      <code><![CDATA[$this->redis->get( $key )]]></code>
+      <code><![CDATA[$this->redis->get( $key )]]></code>
     </InvalidCast>
+    <InvalidPropertyAssignmentValue>
+      <code><![CDATA[[
+        'scheme' => 'tcp',
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'timeout' => 5,
+        'read_timeout' => 5,
+        'retry_interval' => null,
+        'compression_level' => 5,
+        'prefix' => null,
+        'password' => null,
+        'database' => null,
+        'path' => null,
+    ]]]></code>
+    </InvalidPropertyAssignmentValue>
     <InvalidReturnStatement>
-      <code><![CDATA[$expiration ?
-            $this->redis->setex($key, $expiration, $value) :
-            $this->redis->set($key, $value)]]></code>
       <code><![CDATA[$result]]></code>
       <code><![CDATA[$result]]></code>
-      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$this->addOrReplace( false, $key, $value, $group, $expiration )]]></code>
+      <code><![CDATA[$this->addOrReplace( true, $key, $value, $group, $expiration )]]></code>
     </InvalidReturnStatement>
     <InvalidReturnType>
       <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
       <code><![CDATA[bool|int]]></code>
     </InvalidReturnType>
+    <InvalidScalarArgument>
+      <code><![CDATA[$expiration]]></code>
+    </InvalidScalarArgument>
     <MixedArgument>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
     </MixedArgument>
     <MixedAssignment>
-      <code><![CDATA[$this->blogPrefix]]></code>
-      <code><![CDATA[$this->global_prefix]]></code>
-      <code><![CDATA[$this->ignoredGroups]]></code>
+      <code><![CDATA[$ignored_groups]]></code>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
     </MixedAssignment>
     <MixedInferredReturnType>
-      <code><![CDATA[bool|int]]></code>
-      <code><![CDATA[bool|int]]></code>
+      <code><![CDATA[bool|int|Redis]]></code>
+      <code><![CDATA[bool|int|Redis]]></code>
     </MixedInferredReturnType>
     <MixedOperand>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
     </MixedOperand>
     <MixedPropertyTypeCoercion>
+      <code><![CDATA[$ignored_groups]]></code>
       <code><![CDATA[$this->redisParameters]]></code>
       <code><![CDATA[$this->redisParameters]]></code>
       <code><![CDATA[$this->redisParameters]]></code>
@@ -57,17 +84,24 @@
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
     </MixedReturnStatement>
-    <PossiblyNullArgument>
-      <code><![CDATA[$this->redisParameters['scheme']]]></code>
-    </PossiblyNullArgument>
+    <PossiblyNullPropertyAssignmentValue>
+      <code><![CDATA[$is_multisite ? $blog_id : $table_prefix]]></code>
+      <code><![CDATA[$is_multisite || $custom_user_table ? '' : $table_prefix]]></code>
+    </PossiblyNullPropertyAssignmentValue>
     <PropertyNotSetInConstructor>
       <code><![CDATA[$redis]]></code>
     </PropertyNotSetInConstructor>
+    <RedundantCastGivenDocblockType>
+      <code><![CDATA[(int) $this->redisParameters['database']]]></code>
+      <code><![CDATA[(string) $this->redisParameters['host']]]></code>
+      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
+      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
+    </RedundantCastGivenDocblockType>
     <RiskyTruthyFalsyComparison>
       <code><![CDATA[$expiration]]></code>
-      <code><![CDATA[$level]]></code>
-      <code><![CDATA[empty($this->redisParameters['prefix'])]]></code>
-      <code><![CDATA[self::validateInt($this->redisParameters['database'], 1, 16)]]></code>
+      <code><![CDATA[empty( $level )]]></code>
+      <code><![CDATA[empty( $this->redisParameters['prefix'] )]]></code>
+      <code><![CDATA[self::validateInt( $this->redisParameters['database'], 1, 16 )]]></code>
     </RiskyTruthyFalsyComparison>
   </file>
   <file src="wp-object-cache.php">

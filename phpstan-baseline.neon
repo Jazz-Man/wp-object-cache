@@ -1,7 +1,17 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Binary operation \"\\+\\=\" between mixed and int results in an error\\.$#"
+			message: "#^Function wp_cache_decr\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			count: 1
+			path: include/object-cache.php
+
+		-
+			message: "#^Function wp_cache_incr\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			count: 1
+			path: include/object-cache.php
+
+		-
+			message: "#^Binary operation \"\\+\\=\" between mixed and float\\|int results in an error\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 
@@ -16,12 +26,47 @@ parameters:
 			path: src/RedisAdapter.php
 
 		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:add\\(\\) should return bool but returns bool\\|Redis\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
 			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:delete\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 
 		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:replace\\(\\) should return bool but returns bool\\|Redis\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:set\\(\\) should return bool but returns bool\\|Redis\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Parameter \\#2 \\$expire of method Redis\\:\\:setex\\(\\) expects int, int\\<min, \\-1\\>\\|int\\<1, max\\>\\|true given\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$blogPrefix \\(int\\|string\\) does not accept int\\|string\\|null\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$global_prefix \\(string\\) does not accept string\\|null\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
 			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$ignoredGroups \\(array\\<string\\>\\) does not accept array\\.$#"
+			count: 1
+			path: src/RedisAdapter.php
+
+		-
+			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$redisParameters \\(array\\{scheme\\: string, host\\: string, port\\: int, timeout\\: int, read_timeout\\: int, retry_interval\\: int\\|null, compression_level\\: int, prefix\\: string\\|null, \\.\\.\\.\\}\\) does not accept default value of type array\\{scheme\\: 'tcp', host\\: '127\\.0\\.0\\.1', port\\: 6379, timeout\\: 5, read_timeout\\: 5, retry_interval\\: null, compression_level\\: 5, prefix\\: null, \\.\\.\\.\\}\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 

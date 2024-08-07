@@ -36,6 +36,10 @@
         <var name="wpdb" type="\wpdb"/>
         <var name="wp_version" type="string"/>
         <var name="wp_object_cache" type="\JazzMan\WPObjectCache\RedisAdapter"/>
+        <var name="DB_NAME" type="string"/>
+        <var name="CUSTOM_USER_TABLE" type="string"/>
+        <var name="WP_REDIS_IGNORED_GROUPS" type="array"/>
+        <var name="WP_REDIS_IGNORED_GROUPS" type="bool"/>
         <var name="ABSPATH" type="string"/>
     </globals>
 </psalm>
