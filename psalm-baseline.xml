@@ -1,107 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <files psalm-version="5.25.0@01a8eb06b9e9cc6cfb6a320bf9fb14331919d505">
   <file src="include/object-cache.php">
-    <InvalidReturnStatement>
-      <code><![CDATA[wp_object_cache()->decrement($key, $offset, $group)]]></code>
-      <code><![CDATA[wp_object_cache()->increment($key, $offset, $group)]]></code>
-    </InvalidReturnStatement>
-    <InvalidReturnType>
-      <code><![CDATA[bool|int]]></code>
-      <code><![CDATA[bool|int]]></code>
-    </InvalidReturnType>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$data]]></code>
+      <code><![CDATA[$data]]></code>
+    </MixedArgumentTypeCoercion>
   </file>
   <file src="src/RedisAdapter.php">
-    <DocblockTypeContradiction>
-      <code><![CDATA[null === $result]]></code>
-    </DocblockTypeContradiction>
-    <ImplicitToStringCast>
-      <code><![CDATA[$exception]]></code>
-    </ImplicitToStringCast>
     <InvalidArgument>
-      <code><![CDATA[filter_var]]></code>
+      <code><![CDATA[$throwable]]></code>
     </InvalidArgument>
-    <InvalidCast>
-      <code><![CDATA[$this->redis->get( $key )]]></code>
-      <code><![CDATA[$this->redis->get( $key )]]></code>
-    </InvalidCast>
-    <InvalidPropertyAssignmentValue>
-      <code><![CDATA[[
-        'scheme' => 'tcp',
-        'host' => '127.0.0.1',
-        'port' => 6379,
-        'timeout' => 5,
-        'read_timeout' => 5,
-        'retry_interval' => null,
-        'compression_level' => 5,
-        'prefix' => null,
-        'password' => null,
-        'database' => null,
-        'path' => null,
-    ]]]></code>
-    </InvalidPropertyAssignmentValue>
-    <InvalidReturnStatement>
-      <code><![CDATA[$result]]></code>
-      <code><![CDATA[$result]]></code>
-      <code><![CDATA[$this->addOrReplace( false, $key, $value, $group, $expiration )]]></code>
-      <code><![CDATA[$this->addOrReplace( true, $key, $value, $group, $expiration )]]></code>
-    </InvalidReturnStatement>
-    <InvalidReturnType>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool|int]]></code>
-    </InvalidReturnType>
-    <InvalidScalarArgument>
-      <code><![CDATA[$expiration]]></code>
-    </InvalidScalarArgument>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$params]]></code>
+    </LessSpecificReturnStatement>
     <MixedArgument>
       <code><![CDATA[$value]]></code>
-      <code><![CDATA[$value]]></code>
     </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[[
+                DB_NAME,
+                $this->blog_prefix,
+            ]]]></code>
+    </MixedArgumentTypeCoercion>
     <MixedAssignment>
+      <code><![CDATA[$data[ $key ]]]></code>
       <code><![CDATA[$ignored_groups]]></code>
-      <code><![CDATA[$value]]></code>
-      <code><![CDATA[$value]]></code>
+      <code><![CDATA[$result]]></code>
       <code><![CDATA[$value]]></code>
       <code><![CDATA[$value]]></code>
     </MixedAssignment>
-    <MixedInferredReturnType>
-      <code><![CDATA[bool|int|Redis]]></code>
-      <code><![CDATA[bool|int|Redis]]></code>
-    </MixedInferredReturnType>
-    <MixedOperand>
-      <code><![CDATA[$value]]></code>
-      <code><![CDATA[$value]]></code>
-    </MixedOperand>
     <MixedPropertyTypeCoercion>
       <code><![CDATA[$ignored_groups]]></code>
-      <code><![CDATA[$this->redisParameters]]></code>
-      <code><![CDATA[$this->redisParameters]]></code>
-      <code><![CDATA[$this->redisParameters]]></code>
-      <code><![CDATA[$this->redisParameters]]></code>
     </MixedPropertyTypeCoercion>
-    <MixedReturnStatement>
-      <code><![CDATA[$value]]></code>
-      <code><![CDATA[$value]]></code>
-    </MixedReturnStatement>
-    <PossiblyNullPropertyAssignmentValue>
-      <code><![CDATA[$is_multisite ? $blog_id : $table_prefix]]></code>
-      <code><![CDATA[$is_multisite || $custom_user_table ? '' : $table_prefix]]></code>
-    </PossiblyNullPropertyAssignmentValue>
-    <PropertyNotSetInConstructor>
-      <code><![CDATA[$redis]]></code>
-    </PropertyNotSetInConstructor>
-    <RedundantCastGivenDocblockType>
-      <code><![CDATA[(int) $this->redisParameters['database']]]></code>
-      <code><![CDATA[(string) $this->redisParameters['host']]]></code>
-      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
-      <code><![CDATA[(string) $this->redisParameters['scheme']]]></code>
-    </RedundantCastGivenDocblockType>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{host: string, port: int, timeout: int, persistent_id: ?string, prefix: string, retry_interval: int, read_timeout: int, serializer: int, compression: int, compression_level: ?int}]]></code>
+    </MoreSpecificReturnType>
     <RiskyTruthyFalsyComparison>
-      <code><![CDATA[$expiration]]></code>
-      <code><![CDATA[empty( $level )]]></code>
-      <code><![CDATA[empty( $this->redisParameters['prefix'] )]]></code>
-      <code><![CDATA[self::validateInt( $this->redisParameters['database'], 1, 16 )]]></code>
+      <code><![CDATA[empty( $compressions[ (string) $constant_val ] )]]></code>
+      <code><![CDATA[empty( $params['compression_level'] )]]></code>
+      <code><![CDATA[empty( $serializers[ (string) $constant_val ] )]]></code>
     </RiskyTruthyFalsyComparison>
   </file>
   <file src="wp-object-cache.php">
@@ -109,32 +46,25 @@
       <code><![CDATA[$error]]></code>
       <code><![CDATA['error']]></code>
     </DocblockTypeContradiction>
+    <InvalidArgument>
+      <code><![CDATA[$key]]></code>
+    </InvalidArgument>
     <MixedArgument>
-      <code><![CDATA[$item]]></code>
       <code><![CDATA[$message]]></code>
-      <code><![CDATA[$redis->info( $command )]]></code>
+      <code><![CDATA[$redis->info( $infoCommand )]]></code>
       <code><![CDATA[$request['action']]]></code>
       <code><![CDATA[$request['action']]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
-      <code><![CDATA[$key]]></code>
       <code><![CDATA[$linkAttr]]></code>
     </MixedArgumentTypeCoercion>
     <MixedAssignment>
-      <code><![CDATA[$item]]></code>
       <code><![CDATA[$redis]]></code>
-      <code><![CDATA[$result]]></code>
-      <code><![CDATA[$result]]></code>
-      <code><![CDATA[$result]]></code>
     </MixedAssignment>
     <MixedInferredReturnType>
       <code><![CDATA[bool]]></code>
     </MixedInferredReturnType>
     <MixedMethodCall>
-      <code><![CDATA[copy]]></code>
-      <code><![CDATA[copy]]></code>
-      <code><![CDATA[delete]]></code>
-      <code><![CDATA[delete]]></code>
       <code><![CDATA[info]]></code>
     </MixedMethodCall>
     <MixedReturnStatement>

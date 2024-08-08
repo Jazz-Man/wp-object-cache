@@ -1,77 +1,42 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Function wp_cache_decr\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			message: "#^Function wp_cache_add_multiple\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
 			count: 1
 			path: include/object-cache.php
 
 		-
-			message: "#^Function wp_cache_incr\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			message: "#^Function wp_cache_set_multiple\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
 			count: 1
 			path: include/object-cache.php
 
 		-
-			message: "#^Binary operation \"\\+\\=\" between mixed and float\\|int results in an error\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
+			message: "#^Parameter \\#1 \\$data of method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:set_multiple\\(\\) expects array\\{string\\: mixed\\}, array given\\.$#"
+			count: 2
+			path: include/object-cache.php
 
 		-
-			message: "#^Binary operation \"\\-\\=\" between mixed and int results in an error\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Cannot cast mixed to int\\.$#"
+			message: "#^Constant DB_NAME not found\\.$#"
 			count: 2
 			path: src/RedisAdapter.php
 
 		-
-			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:add\\(\\) should return bool but returns bool\\|Redis\\.$#"
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:get_connection_params\\(\\) should return array\\{host\\: string, port\\: int, timeout\\: int, persistent_id\\: string\\|null, prefix\\: string, retry_interval\\: int, read_timeout\\: int, serializer\\: int, \\.\\.\\.\\} but returns array\\{host\\: int\\|string, port\\: int\\|string, timeout\\: int\\|string, persistent_id\\: int\\|string\\|null, prefix\\: int\\|string, retry_interval\\: int\\|string, read_timeout\\: int\\|string, serializer\\: int\\|string, \\.\\.\\.\\}\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 
 		-
-			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:delete\\(\\) should return bool\\|int but returns bool\\|int\\|Redis\\.$#"
+			message: "#^Parameter \\#1 \\$message of function error_log expects string, Exception given\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 
 		-
-			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:replace\\(\\) should return bool but returns bool\\|Redis\\.$#"
+			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$ignored_groups \\(array\\<string\\>\\) does not accept array\\.$#"
 			count: 1
 			path: src/RedisAdapter.php
 
 		-
-			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:set\\(\\) should return bool but returns bool\\|Redis\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Parameter \\#2 \\$expire of method Redis\\:\\:setex\\(\\) expects int, int\\<min, \\-1\\>\\|int\\<1, max\\>\\|true given\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$blogPrefix \\(int\\|string\\) does not accept int\\|string\\|null\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$global_prefix \\(string\\) does not accept string\\|null\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$ignoredGroups \\(array\\<string\\>\\) does not accept array\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Property JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:\\$redisParameters \\(array\\{scheme\\: string, host\\: string, port\\: int, timeout\\: int, read_timeout\\: int, retry_interval\\: int\\|null, compression_level\\: int, prefix\\: string\\|null, \\.\\.\\.\\}\\) does not accept default value of type array\\{scheme\\: 'tcp', host\\: '127\\.0\\.0\\.1', port\\: 6379, timeout\\: 5, read_timeout\\: 5, retry_interval\\: null, compression_level\\: 5, prefix\\: null, \\.\\.\\.\\}\\.$#"
-			count: 1
-			path: src/RedisAdapter.php
-
-		-
-			message: "#^Method WPObjectCache\\:\\:buildFormTable\\(\\) has parameter \\$info with no value type specified in iterable type array\\.$#"
+			message: "#^Cannot call method info\\(\\) on Redis\\|null\\.$#"
 			count: 1
 			path: wp-object-cache.php
 
@@ -87,6 +52,16 @@ parameters:
 
 		-
 			message: "#^Parameter \\#1 \\$args of function WP_Filesystem expects array\\|false, array\\|true given\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Parameter \\#1 \\$name of function app_get_human_friendly expects string, int given\\.$#"
+			count: 1
+			path: wp-object-cache.php
+
+		-
+			message: "#^Parameter \\#2 \\$info of method WPObjectCache\\:\\:buildFormTable\\(\\) expects array\\{string, string\\}, \\(array\\<string, mixed\\>\\|Redis\\|false\\) given\\.$#"
 			count: 1
 			path: wp-object-cache.php
 

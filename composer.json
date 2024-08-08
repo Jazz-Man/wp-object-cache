@@ -23,12 +23,15 @@
   },
   "require": {
     "php": "^8.2",
-    "ext-redis": "*",
+    "ext-igbinary": "*",
+    "ext-lzf": "*",
+    "ext-redis": "^6",
     "composer/installers": "^2.3",
     "jazzman/wp-app-config": "^2.3"
   },
   "require-dev": {
     "jazzman/php-cs-fixer-rules": "^0.2.1",
+    "jetbrains/phpstorm-attributes": "^1.1",
     "php-stubs/wordpress-stubs": "^6.6",
     "phpstan/extension-installer": "^1.4",
     "rector/rector": "^1.2",
