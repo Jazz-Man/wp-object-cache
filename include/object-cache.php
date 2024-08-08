@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Plugin Name: WP Object Cache Drop-In
  * Plugin URI: https://github.com/Jazz-Man/wp-object-cache
@@ -14,24 +16,18 @@ function wp_cache_close(): bool {
     return true;
 }
 
-/**
- * @param mixed $value
- */
-function wp_cache_add(string $key, $value, string $group = 'default', int $expiration = 0): bool {
+function wp_cache_add(string $key, mixed $value, string $group = 'default', int $expiration = 0): bool {
     return wp_object_cache()->add($key, $value, $group, $expiration);
 }
 
 /**
  * @return bool|int
  */
-function wp_cache_decr(string $key, int $offset = 1, string $group = 'default') {
+function wp_cache_decr(string $key, int|float $offset = 1, string $group = 'default'): bool|int|\Redis {
     return wp_object_cache()->decrement($key, $offset, $group);
 }
 
-/**
- * @return bool|int
- */
-function wp_cache_delete(string $key, string $group = 'default') {
+function wp_cache_delete(string $key, string $group = 'default'): bool|int {
     return wp_object_cache()->delete($key, $group);
 }
 
@@ -46,34 +42,25 @@ function wp_cache_get(string $key, string $group = 'default', bool $force = fals
     return wp_object_cache()->get($key, $group, $force, $found);
 }
 
-/**
- * @return bool|int
- */
-function wp_cache_incr(string $key, int $offset = 1, string $group = 'default') {
+
+function wp_cache_incr(string $key, int|float $offset = 1, string $group = 'default'): bool|int|Redis {
     return wp_object_cache()->increment($key, $offset, $group);
 }
 
-/**
- * @param mixed $value
- */
-function wp_cache_replace(string $key, $value = null, string $group = 'default', int $expiration = 0): bool {
+function wp_cache_replace(string $key, mixed $value = null, string $group = 'default', int $expiration = 0): bool {
     return wp_object_cache()->replace($key, $value, $group, $expiration);
 }
 
-/**
- * @param mixed $value
- */
-function wp_cache_set(string $key, $value = null, string $group = 'default', int $expiration = 0): bool {
+function wp_cache_set(string $key, mixed $value = null, string $group = 'default', int $expiration = 0): bool {
     return wp_object_cache()->set($key, $value, $group, $expiration);
 }
 
 /**
  * Switch blog prefix, which changes the cache that is accessed.
  *
- * @param int|string $blogId
  */
-function wp_cache_switch_to_blog($blogId): bool {
-    return wp_object_cache()->switchToBlog((int) $blogId);
+function wp_cache_switch_to_blog(int|string $blogId): bool {
+    return wp_object_cache()->switchToBlog( $blogId);
 }
 
 /**
@@ -81,7 +68,7 @@ function wp_cache_switch_to_blog($blogId): bool {
  *
  * @param string|string[] $groups a group or an array of groups to add
  */
-function wp_cache_add_global_groups($groups): void {
+function wp_cache_add_global_groups( string|array $groups): void {
     wp_object_cache()->addGlobalGroups($groups);
 }
 
@@ -90,7 +77,7 @@ function wp_cache_add_global_groups($groups): void {
  *
  * @param string|string[] $groups a group or an array of groups to add
  */
-function wp_cache_add_non_persistent_groups($groups): void {
+function wp_cache_add_non_persistent_groups(string|array $groups): void {
     wp_object_cache()->addNonPersistentGroups($groups);
 }
 
@@ -112,12 +99,11 @@ function wp_object_cache_get_stats(): void {
 function wp_object_cache(): RedisAdapter {
     global $wp_object_cache;
 
+	/** @var RedisAdapter $wp_object_cache */
+
     return $wp_object_cache;
 }
 
-/**
- * @return \Redis
- */
 function wp_object_cache_instance(): Redis {
     return wp_object_cache()->redisInstance();
 }

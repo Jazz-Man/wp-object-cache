@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace JazzMan\WPObjectCache;
 
 use Exception;
@@ -211,7 +213,7 @@ class RedisAdapter {
     public function flush( int $delay = 0 ): bool {
         $delay = abs( $delay );
 
-        if ( $delay ) {
+        if ( $delay !== 0 ) {
             sleep( $delay );
         }
 
@@ -276,6 +278,7 @@ class RedisAdapter {
 
             return false;
         }
+
         $found = true;
         ++$this->cacheHits;
 
@@ -400,7 +403,7 @@ class RedisAdapter {
     /**
      * In multisite, switch blog prefix when switching blogs.
      */
-    public function switchToBlog( int $blogId ): bool {
+    public function switchToBlog( int|string $blogId ): bool {
         if ( ! \function_exists( 'is_multisite' ) || ! is_multisite() ) {
             return false;
         }
@@ -461,8 +464,7 @@ class RedisAdapter {
             }
         }
 
-        if ( isset( $this->redisParameters['database'] ) && self::validateInt( $this->redisParameters['database'], 1, 16 ) ) {
-            $this->redisParameters['database'] = (int) $this->redisParameters['database'];
+        if (isset( $this->redisParameters['database'] ) && $this->validateInt($this->redisParameters['database'], 1, 16)) {
         }
 
         $this->redisParameters['version'] = (string) phpversion( 'redis' );
@@ -510,7 +512,7 @@ class RedisAdapter {
             $connectionArgs[] = $this->redisParameters['read_timeout'];
         }
 
-        \call_user_func_array( [$this->redis, 'connect'], $connectionArgs );
+        $this->redis->connect(...$connectionArgs);
     }
 
     /**
@@ -532,7 +534,7 @@ class RedisAdapter {
         if ( \defined( 'Redis::COMPRESSION_LZF' ) ) {
             $this->redis->setOption( Redis::OPT_COMPRESSION, Redis::COMPRESSION_LZF );
 
-            $level = self::validateInt( $this->redisParameters['compression_level'], 1 );
+            $level = $this->validateInt($this->redisParameters['compression_level'], 1);
 
             if ( ! empty( $level ) ) {
                 $this->redis->setOption( Redis::OPT_COMPRESSION_LEVEL, $level );
@@ -540,14 +542,15 @@ class RedisAdapter {
         }
 
         if ( ! empty( $this->redisParameters['prefix'] ) ) {
-            if ( \defined( '\Redis::SCAN_PREFIX' ) ) {
+            if ( \defined( \Redis::class . '::SCAN_PREFIX' ) ) {
                 $this->redis->setOption( Redis::OPT_SCAN, Redis::SCAN_PREFIX );
             }
+
             $this->redis->setOption( Redis::OPT_PREFIX, "{$this->redisParameters['prefix']}:" );
         }
     }
 
-    private static function validateInt( mixed $number, int $minRange = 0, ?int $maxRange = null ): bool|int {
+    private function validateInt( mixed $number, int $minRange = 0, ?int $maxRange = null ): bool|int {
         $options = [
             'min_range' => $minRange,
         ];
@@ -580,12 +583,12 @@ class RedisAdapter {
         }
 
         $_key[] = $group;
-        $_key[] = self::sanitizeKey( $key );
+        $_key[] = $this->sanitizeKey($key);
 
         return implode( ':', $_key );
     }
 
-    private static function sanitizeKey( string $key ): string {
+    private function sanitizeKey( string $key ): string {
         return ctype_alnum( $key ) && mb_strlen( $key, '8bit' ) <= 32 ? $key : md5( $key );
     }
 
@@ -636,7 +639,7 @@ class RedisAdapter {
      * @return bool|Redis returns TRUE on success or FALSE on failure
      */
     private function addOrReplace( bool $add, string $key, mixed $value, string $group = 'default', int $expiration = 0 ): bool|Redis {
-        $suspended = self::isSuspendCache();
+        $suspended = $this->isSuspendCache();
 
         if ( $add && $suspended ) {
             return false;
@@ -679,7 +682,7 @@ class RedisAdapter {
      * @throws RedisException
      */
     private function redisSet( string $key, mixed $value, int $expiration ): bool|Redis {
-        $expiration = self::validateInt( $expiration );
+        $expiration = $this->validateInt($expiration);
 
         return $expiration ?
             $this->redis->setex( $key, $expiration, $value ) :
@@ -698,23 +701,23 @@ class RedisAdapter {
     /**
      * Checks if cache is temporarily suspend.
      */
-    private static function isSuspendCache(): bool {
+    private function isSuspendCache(): bool {
         return \function_exists( 'wp_suspend_cache_addition' ) && wp_suspend_cache_addition();
     }
 
     /**
      * Handle the redis failure gracefully or throw an exception.
      *
-     * @param Exception $exception exception thrown
+     * @param Exception $throwable exception thrown
      *
      * @internal
      */
-    private function handleException( Exception $exception ): void {
+    private function handleException( \Throwable $throwable ): void {
         $this->redisConnected = false;
 
         // When Redis is unavailable, fall back to the internal cache by forcing all groups to be "no redis" groups
         $this->ignoredGroups = array_unique( array_merge( $this->ignoredGroups, $this->globalGroups ) );
 
-        error_log( $exception );
+        error_log( $throwable );
     }
 }

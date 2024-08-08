@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Plugin Name: WP Object Cache
  * Description: Redis, Memcached or Apcu backend for the WP Object Cache
@@ -15,34 +17,32 @@
  */
 class WPObjectCache {
 
-    private string $page;
+    private readonly string $page;
 
     private string $pageSlug = 'wp-object-cache';
 
-    private string $baseOptionsPage;
+    private readonly string $baseOptionsPage;
 
     /**
      * @var string[]
      */
-    private array $actions;
+    private array $actions = ['enable-cache', 'disable-cache', 'flush-cache', 'update-dropin'];
 
-    private string $capability;
+    private readonly string $capability;
 
-    private string $rootDir;
+    private readonly string $rootDir;
 
-    private string $dropinFile;
+    private readonly string $dropinFile;
 
-    private string $wpDropinFile;
+    private readonly string $wpDropinFile;
 
     public function __construct() {
         $this->rootDir = plugin_dir_path( __FILE__ );
 
         register_activation_hook( __FILE__, 'wp_cache_flush' );
-        register_deactivation_hook( __FILE__, [$this, 'onDeactivation'] );
+        register_deactivation_hook( __FILE__, $this->onDeactivation(...) );
 
         $isMultisite = is_multisite();
-
-        $this->actions = ['enable-cache', 'disable-cache', 'flush-cache', 'update-dropin'];
 
         $this->dropinFile = "{$this->rootDir}include/object-cache.php";
         $this->wpDropinFile = WP_CONTENT_DIR.'/object-cache.php';
@@ -57,16 +57,16 @@ class WPObjectCache {
 
         $this->page = "{$this->baseOptionsPage}?page={$this->pageSlug}";
 
-        add_action( $adminMenu, [$this, 'addAdminMenuPage'] );
-        add_action( 'plugins_loaded', [$this, 'loadPluginTextdomain'] );
+        add_action( $adminMenu, $this->addAdminMenuPage(...) );
+        add_action( 'plugins_loaded', $this->loadPluginTextdomain(...) );
 
-        add_action( "load-{$screen}", [$this, 'doAdminActions'] );
-        add_action( "load-{$screen}", [$this, 'addAdminPageNotices'] );
+        add_action( "load-{$screen}", $this->doAdminActions(...) );
+        add_action( "load-{$screen}", $this->addAdminPageNotices(...) );
 
-        add_action( 'admin_notices', [$this, 'showAdminNotices'] );
+        add_action( 'admin_notices', $this->showAdminNotices(...) );
 
         $filter = sprintf( '%splugin_action_links_%s', $isMultisite ? 'network_admin_' : '', plugin_basename( __FILE__ ) );
-        add_filter( $filter, [$this, 'addPluginActionsLinks'] );
+        add_filter( $filter, $this->addPluginActionsLinks(...) );
     }
 
     public function loadPluginTextdomain(): void {
@@ -81,7 +81,7 @@ class WPObjectCache {
             __( 'WP Object Cache', 'wp-object-cache' ),
             $this->capability,
             $this->pageSlug,
-            [$this, 'showAdminPage']
+            $this->showAdminPage(...)
         );
     }
 
@@ -189,7 +189,7 @@ class WPObjectCache {
         $content = sprintf(
             '<p class="submit">%s<br/>%s<br/>%s</p>',
             $this->isRedisEnabled() ? $this->getLink( 'flush-cache', $adminLinkAttr ) : '',
-            ! $this->objectCacheDropinExists() ? $this->getLink( 'enable-cache', $adminLinkAttr ) : '',
+            $this->objectCacheDropinExists() ? '' : $this->getLink( 'enable-cache', $adminLinkAttr ),
             $this->validateObjectCacheDropin() ? $this->getLink( 'disable-cache', $adminLinkAttr ) : ''
         );
 
@@ -206,16 +206,16 @@ class WPObjectCache {
             'STATS',
         ];
 
-        foreach ( $infoCommands as $command ) {
-            $content .= $this->buildFormTable( "Redis {$command}", $redis->info( $command ) );
+        foreach ( $infoCommands as $infoCommand ) {
+            $content .= $this->buildFormTable( "Redis {$infoCommand}", $redis->info( $infoCommand ) );
         }
 
         $this->buildAdminWrapper( $content );
     }
 
     public function doAdminActions(): void {
-        // @var \WP_Filesystem_Direct $wp_filesystem
 
+        /** @var WP_Filesystem_Direct $wp_filesystem */
         global $wp_filesystem;
 
         $request = $this->verifyNonceFromRequest();
@@ -259,11 +259,6 @@ class WPObjectCache {
     }
 
     public function addAdminPageNotices(): void {
-        // show PHP version warning
-        if ( PHP_VERSION_ID < 50400 ) {
-            add_settings_error( '', $this->pageSlug, __( 'This plugin requires PHP 5.4 or greater.', 'wp-object-cache' ) );
-        }
-
         $message_code = filter_input( INPUT_GET, 'message' );
 
         $message = false;
@@ -319,8 +314,8 @@ class WPObjectCache {
     }
 
     public function onDeactivation( string $plugin ): void {
-        // @var \WP_Filesystem_Direct $wp_filesystem
 
+	    /** @var WP_Filesystem_Direct $wp_filesystem */
         global $wp_filesystem;
 
         if ( plugin_basename( __FILE__ ) === $plugin ) {
@@ -360,7 +355,7 @@ class WPObjectCache {
     }
 
     private function getLinkLabel( string $action = 'enable-cache' ): string {
-		
+
         return match ( $action ) {
             default => __( 'Enable Object Cache', 'wp-object-cache' ),
             'disable-cache' => __( 'Disable Object Cache', 'wp-object-cache' ),
@@ -398,7 +393,7 @@ class WPObjectCache {
             [
                 'action' => [
                     'filter' => FILTER_CALLBACK,
-                    'options' => static fn ( string $action ) => in_array( $action, $actionsList, true ) ? $action : false,
+                    'options' => static fn ( string $action ): string|false => in_array( $action, $actionsList, true ) ? $action : false,
                 ],
                 '_wpnonce' => [
                     'filter' => FILTER_DEFAULT,
@@ -443,6 +438,9 @@ class WPObjectCache {
         return true;
     }
 
+    /**
+     * @param array{string,string} $info
+     */
     private function buildFormTable( string $label, array $info ): string {
         $columnts = '';
 
