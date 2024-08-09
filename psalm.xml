@@ -11,9 +11,7 @@
     errorBaseline="psalm-baseline.xml"
 >
     <projectFiles>
-        <directory name="src"/>
-        <directory name="include"/>
-        <file name="wp-object-cache.php"/>
+        <file name="object-cache.php"/>
         <ignoreFiles>
             <directory name="vendor"/>
             <file name="rector.php"/>
@@ -42,4 +40,7 @@
         <var name="WP_REDIS_IGNORED_GROUPS" type="bool"/>
         <var name="ABSPATH" type="string"/>
     </globals>
+    <enableExtensions>
+        <extension name="redis"/>
+    </enableExtensions>
 </psalm>
