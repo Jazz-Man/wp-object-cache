@@ -104,8 +104,8 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->hDel( $group, ...$_keys );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             $result = false;
         }
@@ -130,8 +130,8 @@ class RedisAdapter {
 
         try {
             $results = $this->redis?->flushDB();
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             $results = false;
         }
@@ -152,8 +152,8 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->del( ...$list );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             $result = false;
         }
@@ -174,8 +174,8 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->hGet( $group, $key );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             return false;
         }
@@ -192,8 +192,8 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->hMGet( $group, $keys );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             return false;
         }
@@ -208,7 +208,7 @@ class RedisAdapter {
      */
     public function set( string $key, mixed $value, string $group = 'default' ): bool|int|Redis|null {
 
-        if ( self::is_suspend_cache() ) {
+        if ( $this->is_suspend_cache() ) {
             return false;
         }
 
@@ -221,8 +221,8 @@ class RedisAdapter {
         try {
 
             $result = $this->redis?->hSet( $group, $key, $value );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             $result = false;
         }
@@ -247,8 +247,8 @@ class RedisAdapter {
         try {
 
             $result = $this->redis?->hMSet( $group, $data );
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             $result = false;
         }
@@ -269,8 +269,8 @@ class RedisAdapter {
         try {
             $result = $is_float ? $this->redis?->hIncrByFloat( $group, $key, (float) $offset ) : $this->redis?->hIncrBy( $group, $key, (int) $offset );
 
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
 
             return false;
         }
@@ -360,7 +360,7 @@ class RedisAdapter {
         $this->ignored_groups = array_unique( [ ...$this->ignored_groups, ...$groups ] );
     }
 
-    private static function is_suspend_cache(): bool {
+    private function is_suspend_cache(): bool {
         return \function_exists( 'wp_suspend_cache_addition' ) && wp_suspend_cache_addition();
     }
 
@@ -392,8 +392,8 @@ class RedisAdapter {
             $this->redis->setOption( Redis::OPT_PREFIX, "{$params['prefix']}:" );
 
             $this->is_connected = $this->redis->isConnected();
-        } catch ( RedisException $exception ) {
-            $this->handle_exception( $exception );
+        } catch ( RedisException $redisException ) {
+            $this->handle_exception( $redisException );
         }
     }
 
@@ -539,17 +539,17 @@ class RedisAdapter {
     /**
      * Handle the redis failure gracefully or throw an exception.
      *
-     * @param RedisException $throwable exception thrown
+     * @param RedisException $redisException exception thrown
      *
      * @internal
      */
-    private function handle_exception( RedisException $throwable ): void {
+    private function handle_exception( RedisException $redisException ): void {
         $this->is_connected = false;
 
         // When Redis is unavailable, fall back to the internal cache by forcing all groups to be "no redis" groups
         $this->ignored_groups = array_unique( array_merge( $this->ignored_groups, $this->global_groups ) );
 
-        error_log( $throwable );
+        error_log( $redisException );
     }
 
     private function can_modify( string $group = 'default' ): bool {
