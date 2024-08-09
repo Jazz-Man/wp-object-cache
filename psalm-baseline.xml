@@ -4,6 +4,9 @@
     <InvalidArgument>
       <code><![CDATA[$redisException]]></code>
     </InvalidArgument>
+    <InvalidScalarArgument>
+      <code><![CDATA[$key]]></code>
+    </InvalidScalarArgument>
     <LessSpecificReturnStatement>
       <code><![CDATA[$params]]></code>
     </LessSpecificReturnStatement>
@@ -21,7 +24,6 @@
       <code><![CDATA[$data[ $key ]]]></code>
       <code><![CDATA[$result]]></code>
       <code><![CDATA[$value]]></code>
-      <code><![CDATA[$value]]></code>
     </MixedAssignment>
     <MoreSpecificReturnType>
       <code><![CDATA[array{host: string, port: int, timeout: int, persistent_id: ?string, prefix: string, retry_interval: int, read_timeout: int, serializer: int, compression: int, compression_level: ?int}]]></code>
@@ -31,8 +33,5 @@
       <code><![CDATA[empty( $params['compression_level'] )]]></code>
       <code><![CDATA[empty( $serializers[ (string) $constant_val ] )]]></code>
     </RiskyTruthyFalsyComparison>
-    <UndefinedClass>
-      <code><![CDATA[Exception]]></code>
-    </UndefinedClass>
   </file>
 </files>

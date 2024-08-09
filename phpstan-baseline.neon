@@ -1,11 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Caught class JazzMan\\\\WPObjectCache\\\\Exception not found\\.$#"
-			count: 1
-			path: object-cache.php
-
-		-
 			message: "#^Constant DB_NAME not found\\.$#"
 			count: 2
 			path: object-cache.php

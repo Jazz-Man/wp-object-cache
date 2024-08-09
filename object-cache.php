@@ -18,7 +18,7 @@ namespace {
         return true;
     }
 
-    function wp_cache_add( string $key, mixed $value, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
+    function wp_cache_add( int|string $key, mixed $value, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
 
         return wp_object_cache()->set( $key, $value, $group );
     }
@@ -30,11 +30,11 @@ namespace {
         return wp_object_cache()->set_multiple( $data, $group );
     }
 
-    function wp_cache_decr( string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
+    function wp_cache_decr( int|string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
         return wp_object_cache()->decrement( $key, $offset, $group );
     }
 
-    function wp_cache_delete( string $key, string $group = 'default' ): bool|int|Redis|null {
+    function wp_cache_delete( int|string $key, string $group = 'default' ): bool|int|Redis|null {
         return wp_object_cache()->delete( $key, $group );
     }
 
@@ -58,7 +58,7 @@ namespace {
         return wp_object_cache()->flush_group( $group );
     }
 
-    function wp_cache_get( string $key, string $group = 'default', bool $force = false, ?bool &$found = null ): mixed {
+    function wp_cache_get( int|string $key, string $group = 'default', bool $force = false, ?bool &$found = null ): mixed {
         return wp_object_cache()->get( $key, $group );
     }
 
@@ -75,11 +75,11 @@ namespace {
         return wp_object_cache()->increment( $key, $offset, $group );
     }
 
-    function wp_cache_replace( string $key, mixed $value = null, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
+    function wp_cache_replace( int|string $key, mixed $value = null, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
         return wp_object_cache()->set( $key, $value, $group );
     }
 
-    function wp_cache_set( string $key, mixed $value = null, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
+    function wp_cache_set( int|string $key, mixed $value = null, string $group = 'default', int $expiration = 0 ): bool|int|Redis|null {
 
         return wp_object_cache()->set( $key, $value, $group );
     }
@@ -246,13 +246,13 @@ namespace JazzMan\WPObjectCache {
          * @param string|string[] $keys  the key under which to store the value
          * @param string          $group the group value appended to the $key
          */
-        public function delete( array|string $keys, string $group = 'default' ): bool|int|Redis|null {
+        public function delete( array|int|string $keys, string $group = 'default' ): bool|int|Redis|null {
 
             if ( ! $this->can_modify( $group ) ) {
                 return false;
             }
 
-            $_keys = array_map( static fn ( string $key ): string => self::sanitize_key( $key ), (array) $keys );
+            $_keys = array_map( static fn ( int|string $key ): string => self::sanitize_key( $key ), (array) $keys );
 
             try {
                 $result = $this->redis?->hDel( $group, ...$_keys );
@@ -317,11 +317,8 @@ namespace JazzMan\WPObjectCache {
          * Retrieve object from cache.
          *
          * Gets an object from cache based on $key and $group.
-         *
-         * @param string $key   the key under which to store the value
-         * @param string $group the group value appended to the $key
          */
-        public function get( string $key, string $group = 'default' ): mixed {
+        public function get( int|string $key, string $group = 'default' ): mixed {
             $key = self::sanitize_key( $key );
 
             try {
@@ -340,7 +337,7 @@ namespace JazzMan\WPObjectCache {
          */
         public function get_multiple( array $keys, string $group = 'default' ): array|false|Redis|null {
 
-            $keys = array_map( static fn ( $key ): string => self::sanitize_key( $key ), $keys );
+            $keys = array_map( static fn ( int|string $key ): string => self::sanitize_key( $key ), $keys );
 
             try {
                 $result = $this->redis?->hMGet( $group, $keys );
@@ -358,7 +355,7 @@ namespace JazzMan\WPObjectCache {
          *
          * The value is set whether or not this key already exists in Redis.
          */
-        public function set( string $key, mixed $value, string $group = 'default' ): bool|int|Redis|null {
+        public function set( int|string $key, mixed $value, string $group = 'default' ): bool|int|Redis|null {
 
             if ( $this->is_suspend_cache() ) {
                 return false;
@@ -391,6 +388,10 @@ namespace JazzMan\WPObjectCache {
                 return false;
             }
 
+            /**
+             * @var string|int $key
+             * @var mixed      $value
+             */
             foreach ( $data as $key => $value ) {
                 $key = self::sanitize_key( $key );
                 $data[ $key ] = $value;
@@ -408,7 +409,7 @@ namespace JazzMan\WPObjectCache {
             return $result;
         }
 
-        public function increment( string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
+        public function increment( int|string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
 
             if ( ! $this->can_modify( $group ) ) {
                 return false;
@@ -430,7 +431,7 @@ namespace JazzMan\WPObjectCache {
             return $result;
         }
 
-        public function decrement( string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
+        public function decrement( int|string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
 
             $offset = -1 * abs( $offset );
 
@@ -470,7 +471,7 @@ namespace JazzMan\WPObjectCache {
                     esc_attr( (string) $misses ),
                     esc_attr( (string) $ratio )
                 );
-            } catch ( Exception ) {
+            } catch ( RedisException ) {
                 return;
             }
         }
@@ -674,9 +675,9 @@ namespace JazzMan\WPObjectCache {
             return $params;
         }
 
-        private static function sanitize_key( string $key ): string {
+        private static function sanitize_key( int|string $key ): string {
 
-            return (string) preg_replace( '/[^a-z0-9_\-:]/', '', strtolower( $key ) );
+            return (string) preg_replace( '/[^a-z0-9_\-:]/', '', strtolower( (string) $key ) );
         }
 
         /**
