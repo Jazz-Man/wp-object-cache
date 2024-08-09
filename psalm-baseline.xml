@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="5.25.0@01a8eb06b9e9cc6cfb6a320bf9fb14331919d505">
+  <file src="object-cache.php">
+    <InvalidArgument>
+      <code><![CDATA[$redisException]]></code>
+    </InvalidArgument>
+    <InvalidScalarArgument>
+      <code><![CDATA[$key]]></code>
+    </InvalidScalarArgument>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$params]]></code>
+    </LessSpecificReturnStatement>
+    <MixedArgument>
+      <code><![CDATA[$value]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$data]]></code>
+      <code><![CDATA[[
+                    DB_NAME,
+                    $this->blog_prefix,
+                ]]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedAssignment>
+      <code><![CDATA[$data[ $key ]]]></code>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedAssignment>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{host: string, port: int, timeout: int, persistent_id: ?string, prefix: string, retry_interval: int, read_timeout: int, serializer: int, compression: int, compression_level: ?int}]]></code>
+    </MoreSpecificReturnType>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[empty( $compressions[ (string) $constant_val ] )]]></code>
+      <code><![CDATA[empty( $params['compression_level'] )]]></code>
+      <code><![CDATA[empty( $serializers[ (string) $constant_val ] )]]></code>
+    </RiskyTruthyFalsyComparison>
+  </file>
+</files>

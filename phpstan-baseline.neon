@@ -1,0 +1,36 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Constant DB_NAME not found\\.$#"
+			count: 2
+			path: object-cache.php
+
+		-
+			message: "#^Function wp_cache_get_multiple\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: object-cache.php
+
+		-
+			message: "#^Function wp_cache_set_multiple\\(\\) has parameter \\$data with no value type specified in iterable type array\\.$#"
+			count: 1
+			path: object-cache.php
+
+		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:get_connection_params\\(\\) should return array\\{host\\: string, port\\: int, timeout\\: int, persistent_id\\: string\\|null, prefix\\: string, retry_interval\\: int, read_timeout\\: int, serializer\\: int, \\.\\.\\.\\} but returns array\\{host\\: int\\|string, port\\: int\\|string, timeout\\: int\\|string, persistent_id\\: int\\|string\\|null, prefix\\: int\\|string, retry_interval\\: int\\|string, read_timeout\\: int\\|string, serializer\\: int\\|string, \\.\\.\\.\\}\\.$#"
+			count: 1
+			path: object-cache.php
+
+		-
+			message: "#^Method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:get_multiple\\(\\) return type has no value type specified in iterable type array\\.$#"
+			count: 1
+			path: object-cache.php
+
+		-
+			message: "#^Parameter \\#1 \\$data of method JazzMan\\\\WPObjectCache\\\\RedisAdapter\\:\\:set_multiple\\(\\) expects array\\{string\\: mixed\\}, array given\\.$#"
+			count: 1
+			path: object-cache.php
+
+		-
+			message: "#^Parameter \\#1 \\$message of function error_log expects string, RedisException given\\.$#"
+			count: 1
+			path: object-cache.php

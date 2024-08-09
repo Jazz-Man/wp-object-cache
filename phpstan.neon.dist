@@ -1,0 +1,19 @@
+includes:
+    - %currentWorkingDirectory%/phpstan-baseline.neon
+
+parameters:
+	level: max
+	inferPrivatePropertyTypeFromConstructor: true
+	treatPhpDocTypesAsCertain: true
+	dynamicConstantNames:
+	    - WP_REDIS_IGNORED_GROUPS
+	    - DB_NAME
+	    - CUSTOM_USER_TABLE
+	    - WP_REDIS_IGNORED_GROUPS
+	fileExtensions:
+	    - php
+	excludePaths:
+	    - .php-cs-fixer.php
+	    - rector.php
+	paths:
+	    - ./object-cache.php
