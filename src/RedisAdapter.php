@@ -7,7 +7,7 @@ namespace JazzMan\WPObjectCache;
 use Exception;
 use JetBrains\PhpStorm\ExpectedValues;
 use Redis;
-use Throwable;
+use RedisException;
 
 /**
  * Class RedisAdapter.
@@ -71,12 +71,6 @@ class RedisAdapter {
 
         $this->blog_prefix = $this->is_multisite ? (int) $blog_id : (string) $table_prefix;
 
-        $ignored_groups = \defined( 'WP_REDIS_IGNORED_GROUPS' ) ? \constant( 'WP_REDIS_IGNORED_GROUPS' ) : false;
-
-        if ( \is_array( $ignored_groups ) ) {
-            $this->ignored_groups = $ignored_groups;
-        }
-
         $this->connect();
     }
 
@@ -110,7 +104,7 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->hDel( $group, ...$_keys );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             $result = false;
@@ -136,7 +130,7 @@ class RedisAdapter {
 
         try {
             $results = $this->redis?->flushDB();
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             $results = false;
@@ -158,7 +152,7 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->del( ...$list );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             $result = false;
@@ -180,7 +174,7 @@ class RedisAdapter {
 
         try {
             $result = $this->redis?->hGet( $group, $key );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             return false;
@@ -192,13 +186,13 @@ class RedisAdapter {
     /**
      * @param string[] $keys
      */
-    public function get_multiple( array $keys, string $group = 'default' ): mixed {
+    public function get_multiple( array $keys, string $group = 'default' ): array|false|Redis|null {
 
         $keys = array_map( static fn ( $key ): string => self::sanitize_key( $key ), $keys );
 
         try {
             $result = $this->redis?->hMGet( $group, $keys );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             return false;
@@ -214,6 +208,10 @@ class RedisAdapter {
      */
     public function set( string $key, mixed $value, string $group = 'default' ): bool|int|Redis|null {
 
+        if ( self::is_suspend_cache() ) {
+            return false;
+        }
+
         if ( ! $this->can_modify( $group ) ) {
             return false;
         }
@@ -223,7 +221,7 @@ class RedisAdapter {
         try {
 
             $result = $this->redis?->hSet( $group, $key, $value );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             $result = false;
@@ -249,7 +247,7 @@ class RedisAdapter {
         try {
 
             $result = $this->redis?->hMSet( $group, $data );
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             $result = false;
@@ -258,9 +256,6 @@ class RedisAdapter {
         return $result;
     }
 
-    /**
-     * Increment a Redis counter by the amount specified.
-     */
     public function increment( string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
 
         if ( ! $this->can_modify( $group ) ) {
@@ -274,7 +269,7 @@ class RedisAdapter {
         try {
             $result = $is_float ? $this->redis?->hIncrByFloat( $group, $key, (float) $offset ) : $this->redis?->hIncrBy( $group, $key, (int) $offset );
 
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
 
             return false;
@@ -283,9 +278,6 @@ class RedisAdapter {
         return $result;
     }
 
-    /**
-     * Decrement a Redis counter by the amount specified.
-     */
     public function decrement( string $key, float|int $offset = 1, string $group = 'default' ): false|float|int|Redis|null {
 
         $offset = -1 * abs( $offset );
@@ -293,9 +285,6 @@ class RedisAdapter {
         return $this->increment( $key, $offset, $group );
     }
 
-    /**
-     * Render data about current cache requests.
-     */
     public function stats(): void {
 
         if ( ! $this->redis_status() ) {
@@ -334,9 +323,6 @@ class RedisAdapter {
         }
     }
 
-    /**
-     * In multisite, switch blog prefix when switching blogs.
-     */
     public function switch_to_blog( int|string $blogId ): bool {
         if ( ! $this->is_multisite ) {
             return false;
@@ -348,16 +334,19 @@ class RedisAdapter {
     }
 
     /**
-     * Sets the list of global groups.
-     *
      * @param string|string[] $groups list of groups that are global
      */
     public function add_global_groups( array|string $groups ): void {
+        $groups = (array) $groups;
+
         if ( $this->redis_status() ) {
-            $this->global_groups = array_unique( array_merge( $this->global_groups, (array) $groups ) );
-        } else {
-            $this->ignored_groups = array_unique( array_merge( $this->ignored_groups, (array) $groups ) );
+
+            $this->global_groups = array_unique( [ ...$this->global_groups, ...$groups ] );
+
+            return;
         }
+
+        $this->add_non_persistent_groups( $groups );
     }
 
     /**
@@ -368,7 +357,11 @@ class RedisAdapter {
     public function add_non_persistent_groups( array|string $groups ): void {
         $groups = (array) $groups;
 
-        $this->ignored_groups = array_unique( array_merge( $this->ignored_groups, $groups ) );
+        $this->ignored_groups = array_unique( [ ...$this->ignored_groups, ...$groups ] );
+    }
+
+    private static function is_suspend_cache(): bool {
+        return \function_exists( 'wp_suspend_cache_addition' ) && wp_suspend_cache_addition();
     }
 
     private function connect(): void {
@@ -399,7 +392,7 @@ class RedisAdapter {
             $this->redis->setOption( Redis::OPT_PREFIX, "{$params['prefix']}:" );
 
             $this->is_connected = $this->redis->isConnected();
-        } catch ( Exception $exception ) {
+        } catch ( RedisException $exception ) {
             $this->handle_exception( $exception );
         }
     }
@@ -415,7 +408,12 @@ class RedisAdapter {
          *
          * @return array{string,int}
          */
-        $get_valid_redis_list = static function (
+        $get_valid_redis_list = /**
+         * @return int[]
+         *
+         * @psalm-return array<string, int>
+         */
+        static function (
             #[ExpectedValues( values: [
                 'SERIALIZER',
                 'COMPRESSION',
@@ -541,11 +539,11 @@ class RedisAdapter {
     /**
      * Handle the redis failure gracefully or throw an exception.
      *
-     * @param Exception $throwable exception thrown
+     * @param RedisException $throwable exception thrown
      *
      * @internal
      */
-    private function handle_exception( Throwable $throwable ): void {
+    private function handle_exception( RedisException $throwable ): void {
         $this->is_connected = false;
 
         // When Redis is unavailable, fall back to the internal cache by forcing all groups to be "no redis" groups

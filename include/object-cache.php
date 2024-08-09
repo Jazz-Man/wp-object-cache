@@ -10,6 +10,8 @@ use JazzMan\WPObjectCache\RedisAdapter;
  * Description: Redis, Memcached or Apcu backend for the WP Object Cache
  * Version: v2.1.2
  * Author: Vasyl Sokolyk.
+ *
+ * @return true
  */
 function wp_cache_close(): bool {
     return true;
@@ -20,6 +22,9 @@ function wp_cache_add( string $key, mixed $value, string $group = 'default', int
     return wp_object_cache()->set( $key, $value, $group );
 }
 
+/**
+ * @param array{string: mixed} $data
+ */
 function wp_cache_add_multiple( array $data, string $group = 'default', int $expiration = 0 ): bool|Redis|null {
     return wp_object_cache()->set_multiple( $data, $group );
 }
@@ -59,7 +64,7 @@ function wp_cache_get( string $key, string $group = 'default', bool $force = fal
 /**
  * @param string[] $keys
  */
-function wp_cache_get_multiple( array $keys, string $group = 'default', bool $force = false, ?bool &$found = null ): mixed {
+function wp_cache_get_multiple( array $keys, string $group = 'default', bool $force = false, ?bool &$found = null ): array|false|Redis|null {
 
     return wp_object_cache()->get_multiple( $keys, $group );
 }
