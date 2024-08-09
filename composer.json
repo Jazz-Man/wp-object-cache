@@ -1,7 +1,8 @@
 {
   "name": "jazzman/wp-object-cache",
   "license": "MIT",
-  "type": "wordpress-plugin",
+  "type": "wordpress-dropin",
+  "installer-name": "object-cache.php",
   "description": "Enable object caching for WordPress",
   "authors": [
     {
@@ -23,11 +24,8 @@
   },
   "require": {
     "php": "^8.2",
-    "ext-igbinary": "*",
-    "ext-lzf": "*",
     "ext-redis": "^6",
-    "composer/installers": "^2.3",
-    "jazzman/wp-app-config": "^2.3"
+    "composer/installers": "^2.3"
   },
   "require-dev": {
     "jazzman/php-cs-fixer-rules": "^0.2.1",
@@ -46,11 +44,6 @@
       "vendor/wp/wp-content/themes/{$name}/": ["type:wordpress-theme"]
     },
     "wordpress-install-dir": "vendor/wp"
-  },
-  "autoload": {
-    "psr-4": {
-      "JazzMan\\WPObjectCache\\": "src"
-    }
   },
   "scripts": {
     "rm-cache" : [

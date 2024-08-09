@@ -16,6 +16,4 @@ parameters:
 	    - .php-cs-fixer.php
 	    - rector.php
 	paths:
-	    - include/
-	    - src/
-	    - wp-object-cache.php
+	    - ./object-cache.php

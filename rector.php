@@ -23,9 +23,7 @@ return RectorConfig::configure()
         rectorPreset: true
     )
     ->withPaths( [
-        __DIR__.'/include',
-        __DIR__.'/src',
-        __DIR__.'/wp-object-cache.php',
+        __DIR__.'/object-cache.php',
     ] )
     ->withPhpPolyfill()
     ->withFileExtensions( [ 'php' ] )
