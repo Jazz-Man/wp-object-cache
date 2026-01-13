@@ -28,7 +28,7 @@
     "composer/installers": "^2.3"
   },
   "require-dev": {
-    "jazzman/php-cs-fixer-rules": "^0.2.1",
+    "jazzman/php-cs-fixer-rules": "^0.3.0",
     "jetbrains/phpstorm-attributes": "^1.1",
     "php-stubs/wordpress-stubs": "^6.6",
     "phpstan/extension-installer": "^1.4",
